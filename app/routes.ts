@@ -11,7 +11,8 @@ export default [
     index("routes/home.tsx"),
     route(
         "contacts/:contactId", 
-        "routes/contact.tsx"),
+        "routes/contact.tsx"
+    ),
     route(
         "contacts/:contactId/edit",
         "routes/edit-contact.tsx"
@@ -19,6 +20,10 @@ export default [
     route(
         "contacts/:contactId/destroy",
         "routes/destroy-contact.tsx"
+    ),
+    route(
+        "groups/:uniqueId", 
+        "routes/group.tsx"
     ),
   ]),
     route("about", "routes/about.tsx"),

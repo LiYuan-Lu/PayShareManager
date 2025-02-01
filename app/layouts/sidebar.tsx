@@ -7,7 +7,7 @@ import {
   useSubmit,
 } from "react-router";
 
-import { getContacts } from "../data";
+import { getContacts, getGroups } from "../data";
 import type { Route } from "./+types/sidebar";
 import { useEffect } from "react";
 
@@ -17,13 +17,14 @@ export async function loader({
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
-  return { contacts, q };
+  const groups = await getGroups();
+  return { contacts, q, groups };
 }
 
 export default function SidebarLayout({
   loaderData,
 }: Route.ComponentProps) {
-    const { contacts, q } = loaderData;
+    const { contacts, q, groups } = loaderData;
     const navigation = useNavigation();
     const submit = useSubmit();
     const searching =
@@ -74,6 +75,30 @@ export default function SidebarLayout({
           </Form>
         </div>
         <nav>
+          <div>
+            <h1>Groups</h1>
+          </div>
+          {
+          groups.length ? (
+            <ul>
+              {groups.map((group) => (
+                <li key={group.uniqueId}>
+                  <NavLink
+                    to={`groups/${group.uniqueId}`}
+                  >
+                    {group.name}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>
+              <i> No groups</i>
+            </p>
+          )}
+          <div>
+            <h1>Contacts</h1>
+          </div>
           {contacts.length ? (
             <ul>
               {contacts.map((contact) => (
