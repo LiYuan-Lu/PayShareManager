@@ -7,7 +7,8 @@ import {
   useSubmit,
 } from "react-router";
 
-import { getContacts, getGroups } from "../data";
+import { getContacts } from "../data";
+import { getGroups } from "../data/group-data";
 import type { Route } from "./+types/sidebar";
 import { useEffect } from "react";
 

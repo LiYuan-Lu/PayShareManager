@@ -1,8 +1,6 @@
 import { Form, useFetcher } from "react-router";
 
-import type { GroupRecord } from "../data";
-
-import { getGroup, updateContact } from "../data";
+import { getGroup } from "../data/group-data";
 import type { Route } from "./+types/contact";
 
 // TODO: Update group function
