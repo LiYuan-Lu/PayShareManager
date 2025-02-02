@@ -1,4 +1,4 @@
-# Pay Share Calculator
+# Pay Share Manager
 
 This is a web application designed to record who paid what amount and to calculate how to evenly split the bill.
 
