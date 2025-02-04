@@ -25,6 +25,18 @@ export default [
         "groups/:uniqueId", 
         "routes/group.tsx"
     ),
+    route(
+        "create-group",
+        "routes/create-group.tsx"
+    ),
+    route(
+        "groups/:uniqueId/edit", 
+        "routes/edit-group.tsx"
+    ),
+    route(
+        "groups/:uniqueId/destroy", 
+        "routes/destroy-group.tsx"
+    ),
   ]),
     route("about", "routes/about.tsx"),
 ] satisfies RouteConfig;

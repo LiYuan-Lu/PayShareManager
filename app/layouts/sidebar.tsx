@@ -79,6 +79,11 @@ export default function SidebarLayout({
           <div>
             <h1>Groups</h1>
           </div>
+          <div>
+            <Form method="post" action="/create-group">
+            <button type="submit" className="center">New Group</button>
+            </Form>
+          </div>
           {
           groups.length ? (
             <ul>

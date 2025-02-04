@@ -5,7 +5,7 @@ import invariant from "tiny-invariant";
 import { v4 as uuidv4 } from 'uuid';
 
 type GroupMutation = {
-  uniqueId?: string;
+  uniqueId: string;
   name?: string;
   description?: string;
   favorite?: boolean;
@@ -87,6 +87,10 @@ export async function updateGroup(uniqueId: string, updates: GroupMutation) {
   }
   await fakeGroups.set(uniqueId, { ...group, ...updates });
   return group;
+}
+
+export async function deleteGroup(uniqueId: string) {
+  fakeGroups.destroy(uniqueId);
 }
 
 [
