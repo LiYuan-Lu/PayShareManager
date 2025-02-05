@@ -1,0 +1,15 @@
+.group-member-list-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.group-member-container {  
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.group-member-item {
+    margin-right: 10px;
+    margin-top: 10px;
+}

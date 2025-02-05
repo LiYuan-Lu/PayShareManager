@@ -63,6 +63,9 @@ export default function Group({
           </Form>
         </div>
       </div>
+      <div id="payment-list">
+
+      </div>
     </div>
   );
 }
