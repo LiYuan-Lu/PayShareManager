@@ -1,10 +1,10 @@
 import { Form, redirect, useNavigate } from "react-router";
 import type { Route } from "./+types/create-group";
 import { updateGroup, createEmptyGroup } from "../data/group-data";
-import { useRef } from "react";
-
+import { useRef, useState, type JSXElementConstructor, type ReactElement, type ReactNode, type ReactPortal } from "react";
 
 import "./create-group.css";
+import { getContact } from "../data";
 
 export async function action({
   params,
@@ -27,22 +27,29 @@ export default function EditContact({
 }: Route.ComponentProps) {
   const navigate = useNavigate();
 
-  let groupMember = [];
-
-  const addGroupMember = () => {
-    groupMember.push({
-      name: "",
-      email: ""
-    });
-  };
+  // let groupMember: { first: string | undefined; last: string | undefined; }[] = [];
+  const [members, setMembers] = useState<any>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function addGroupMember() {
+    if(!inputRef.current)
+    {
+      return;
+    }
+    const member = await getContact(inputRef.current.value.toString());
+    
+  };
 
   const handleAddMember = () => {
     if (inputRef.current) {
       console.log('Current Input Value:', inputRef.current.value);
     }
   }
+
+  const handleDelete = (indexToDelete: number) => {
+    setMembers(members.filter((_: any, index: number) => index !== indexToDelete));
+  };
 
     return (
     <Form id="contact-form" method="post">
@@ -85,16 +92,31 @@ export default function EditContact({
                 type="text"
                 ref={inputRef}
               />
-              <input 
-                className="group-member-item"
-                aria-label="Email"
-                defaultValue=""
-                name="member-email"
-                placeholder="Email"
-                readOnly
-              />
-              <div className="group-member-item" id="add-member-button" onClick={handleAddMember}>Add member</div>
+              <div className="group-member-item group-member-button" id="add-member-button" onClick=
+              {() => { 
+                const new_member_name = inputRef.current?.value.toString();
+                if(!new_member_name)
+                {
+                  return;
+                }
+                if(members.includes(new_member_name)){
+                  return;
+                }
+                setMembers([...members, inputRef.current?.value.toString()]);
+              }
+              }>Add member</div>
             </div>
+            {
+              members.map((member: string, index: number) => (
+                <div className="group-member-container">
+                  <div className="group-member-item group-new-member">{member}</div>
+                  <div
+                  id="delete-member" 
+                  className="group-memeber-item delete-group-member-button"
+                  onClick={ ()=>handleDelete(index) }
+                  >Delete</div>
+                </div>
+            ))}
           </div>
         </label>
       </div>
