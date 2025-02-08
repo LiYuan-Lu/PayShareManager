@@ -1,20 +1,13 @@
-import { Form, useFetcher } from "react-router";
+import { Form } from "react-router";
 
 import { getGroup } from "../data/group-data";
 import type { Route } from "./+types/contact";
 
-// TODO: Update group function
-// export async function action({
-//   params,
-//   request,
-// }: Route.ActionArgs) {
-//   const formData = await request.formData();
-//   return updateContact(params.contactId, {
-//     favorite: formData.get("favorite") === "true",
-//   });
-// }
-
 export async function loader({ params }: Route.LoaderArgs) {
+  if(!params.uniqueId)
+  {
+    return;
+  }
   const group = await getGroup(params.uniqueId);
   if (!group) {
     throw new Response("Not Found", { status: 404 });
@@ -41,6 +34,14 @@ export default function Group({
           {/* <Favorite group={group} /> */}
         </h1>
         {group.description ? <p>{group.description}</p> : null}
+
+        <h1>Members</h1>
+        {
+          Array.isArray(group.members) ? group.members.map((member: string, index: number) => (
+            <div className="group-member-container" key={index}>
+              <div className="group-member-item group-new-member">{member}</div>
+            </div>
+        )) : null}
 
         <div>
           <Form action="edit">

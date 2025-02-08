@@ -11,6 +11,7 @@ export async function action({
   request,
 }: Route.ActionArgs) {
     const formData = await request.formData();
+
     const name = formData.get('name');
     if(!name)
     {
@@ -18,11 +19,24 @@ export async function action({
     }
     const group = await createEmptyGroup();
     const updates = Object.fromEntries(formData);
+    
+    if (updates.members) {
+      try {
+        updates.members = JSON.parse(updates.members as string);
+      } catch (error) {
+        console.error('Error parsing members:', error);
+      }
+    }
+
+    if(!group.uniqueId)
+    {
+      return;
+    }
     await updateGroup(group.uniqueId, updates);
     return redirect(`/groups/${group.uniqueId}`);
 }
 
-export default function EditContact({
+export default function CreateGroup({
   loaderData,
 }: Route.ComponentProps) {
   const navigate = useNavigate();
@@ -32,19 +46,16 @@ export default function EditContact({
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function addGroupMember() {
-    if(!inputRef.current)
+  const handleAddMember = () => {
+    const new_member_name = inputRef.current?.value.toString();
+    if(!new_member_name)
     {
       return;
     }
-    const member = await getContact(inputRef.current.value.toString());
-    
-  };
-
-  const handleAddMember = () => {
-    if (inputRef.current) {
-      console.log('Current Input Value:', inputRef.current.value);
+    if(members.includes(new_member_name)){
+      return;
     }
+    setMembers([...members, inputRef.current?.value.toString()]);
   }
 
   const handleDelete = (indexToDelete: number) => {
@@ -57,7 +68,7 @@ export default function EditContact({
         <span>Name</span>
         <input
           aria-label="Name"
-          defaultValue=""
+          defaultValue="New Group"
           name="name"
           placeholder="Name"
           type="text"
@@ -87,28 +98,18 @@ export default function EditContact({
                 className="group-member-item"
                 aria-label="Name"
                 defaultValue=""
-                name="member-name"
                 placeholder="Name"
                 type="text"
                 ref={inputRef}
               />
-              <div className="group-member-item group-member-button" id="add-member-button" onClick=
-              {() => { 
-                const new_member_name = inputRef.current?.value.toString();
-                if(!new_member_name)
-                {
-                  return;
-                }
-                if(members.includes(new_member_name)){
-                  return;
-                }
-                setMembers([...members, inputRef.current?.value.toString()]);
-              }
-              }>Add member</div>
+              <div className="group-member-item group-member-button" id="add-member-button" 
+              onClick={handleAddMember}
+              >Add member</div>
             </div>
+            <input type="hidden" name="members" value={JSON.stringify(members)} />
             {
               members.map((member: string, index: number) => (
-                <div className="group-member-container">
+                <div className="group-member-container" key={index}>
                   <div className="group-member-item group-new-member">{member}</div>
                   <div
                   id="delete-member" 
