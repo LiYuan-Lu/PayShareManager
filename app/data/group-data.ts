@@ -5,10 +5,11 @@ import invariant from "tiny-invariant";
 import { v4 as uuidv4 } from 'uuid';
 
 type GroupMutation = {
-  uniqueId: string;
+  uniqueId?: string;
   name?: string;
   description?: string;
   favorite?: boolean;
+  members?: Array<String>;
 };
 
 export type GroupRecord = GroupMutation & {
@@ -97,14 +98,17 @@ export async function deleteGroup(uniqueId: string) {
   {
     name: "Group 1",
     description: "This is group 1",
+    members:[],
   },
   {
     name: "Group 2",
     description: "This is group 2",
+    members:[],
   },
   {
     name: "Group 3",
     description: "This is group 3",
+    members:[],
   },
 ].forEach((group) => {
   fakeGroups.create({
