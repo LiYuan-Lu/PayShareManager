@@ -1,7 +1,11 @@
 import { Form } from "react-router";
+import { useState } from "react";
 
 import { getGroup } from "../data/group-data";
 import type { Route } from "./+types/contact";
+
+import Modal from "../components/modal";
+import { createPortal } from "react-dom";
 
 export async function loader({ params }: Route.LoaderArgs) {
   if(!params.uniqueId)
@@ -20,6 +24,11 @@ export default function Group({
 }: Route.ComponentProps) {
   const { group } = loaderData;
 
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleButtonClick = (msg: String) => setModalOpen(false);
+  const openModal = () => setModalOpen(true);
+
   return (
     <div id="group">
       <div>
@@ -35,13 +44,33 @@ export default function Group({
         </h1>
         {group.description ? <p>{group.description}</p> : null}
 
-        <h1>Members</h1>
+        <h2>Members</h2>
         {
           Array.isArray(group.members) ? group.members.map((member: string, index: number) => (
             <div className="group-member-container" key={index}>
               <div className="group-member-item group-new-member">{member}</div>
             </div>
         )) : null}
+        <h2>Payment list</h2>
+        <div>
+        <button className="btn btn-open" onClick={openModal}>
+          Open
+        </button>
+        {modalOpen &&
+        createPortal(
+          <Modal
+            closeModal={handleButtonClick}
+            onSubmit={handleButtonClick}
+            onCancel={handleButtonClick}
+          >
+            <h1>This is a modal</h1>
+            <br />
+            <p>This is the modal description</p>
+          </Modal>,
+          document.body
+        )}
+        </div>
+        
 
         <div>
           <Form action="edit">
