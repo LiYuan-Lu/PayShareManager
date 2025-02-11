@@ -30,7 +30,7 @@ const Modal: React.FC<ModalProps> = ({ onSubmit, onCancel, closeModal, children 
             type="submit"
             onClick={() => onSubmit('Submit button was clicked')}
           >
-            Submit
+            Save
           </button>
           <button
             type="button"

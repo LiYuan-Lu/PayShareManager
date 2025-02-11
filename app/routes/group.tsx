@@ -6,6 +6,7 @@ import type { Route } from "./+types/contact";
 
 import Modal from "../components/modal";
 import { createPortal } from "react-dom";
+import Select from 'react-select'
 
 export async function loader({ params }: Route.LoaderArgs) {
   if(!params.uniqueId)
@@ -28,6 +29,10 @@ export default function Group({
 
   const handleButtonClick = (msg: String) => setModalOpen(false);
   const openModal = () => setModalOpen(true);
+
+  const options = group.members.map((member: string) => {
+    return {label: member, value: member};
+  });
 
   return (
     <div id="group">
@@ -54,7 +59,7 @@ export default function Group({
         <h2>Payment list</h2>
         <div>
         <button className="btn btn-open" onClick={openModal}>
-          Open
+          Add Payment
         </button>
         {modalOpen &&
         createPortal(
@@ -63,9 +68,39 @@ export default function Group({
             onSubmit={handleButtonClick}
             onCancel={handleButtonClick}
           >
-            <h1>This is a modal</h1>
-            <br />
-            <p>This is the modal description</p>
+            <h1>Payment</h1>
+            <br/>
+            <p>
+              <span>Name</span>
+              <input
+                aria-label="Name"
+                defaultValue="Name"
+                name="name"
+                placeholder="Name"
+                type="text"
+              />
+            </p>
+            <p>
+              <span>Cost</span>
+              <input
+                aria-label="Cost"
+                defaultValue={0}
+                name="cost"
+                placeholder="Cos"
+                type="number"
+              />
+            </p>
+            <div>
+              <p>Paid by</p>
+              <Select 
+                options={options} 
+              />
+              <p>Shared by</p>
+              <Select 
+                options={options} 
+                isMulti
+              />
+            </div>
           </Modal>,
           document.body
         )}
@@ -99,30 +134,3 @@ export default function Group({
     </div>
   );
 }
-
-// function Favorite({
-//   contact,
-// }: {
-//   contact: Pick<GroupRecord, "favorite">;
-// }) {
-//   const fetcher = useFetcher();
-//   const favorite = fetcher.formData
-//     ? fetcher.formData.get("favorite") === "true"
-//     : contact.favorite;
-
-//   return (
-//     <fetcher.Form method="post">
-//       <button
-//         aria-label={
-//           favorite
-//             ? "Remove from favorites"
-//             : "Add to favorites"
-//         }
-//         name="favorite"
-//         value={favorite ? "false" : "true"}
-//       >
-//         {favorite ? "★" : "☆"}
-//       </button>
-//     </fetcher.Form>
-//   );
-// }

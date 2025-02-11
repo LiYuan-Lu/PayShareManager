@@ -43,6 +43,7 @@ const fakeGroups = {
     const uniqueId = await this.getUniqueId();
     const createdAt = new Date().toISOString();
     const newGroup = { uniqueId, createdAt, ...values };
+    newGroup.members = ["You"];
     fakeGroups.records[uniqueId] = newGroup;
     return newGroup;
   },
@@ -97,18 +98,15 @@ export async function deleteGroup(uniqueId: string) {
 [
   {
     name: "Group 1",
-    description: "This is group 1",
-    members:[],
+    description: "This is group 1"
   },
   {
     name: "Group 2",
-    description: "This is group 2",
-    members:[],
+    description: "This is group 2"
   },
   {
     name: "Group 3",
-    description: "This is group 3",
-    members:[],
+    description: "This is group 3"
   },
 ].forEach((group) => {
   fakeGroups.create({
