@@ -1,7 +1,8 @@
 import { Form } from "react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
-import { getGroup } from "../data/group-data";
+import { getGroup, updatePaymentList} from "../data/group-data";
+import type { Payment } from "../data/group-data";
 import type { Route } from "./+types/contact";
 
 import Modal from "../components/modal";
@@ -22,7 +23,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 type PayerOption = {label: String, value: String}
 type ShareMemberOption = {label: String, value: String};
-type Payment = {name: String, payer: String, cost: Number, shareMember: Array<String>}
+// type Payment = {name: String, payer: String, cost: Number, shareMember: Array<String>}
 
 export default function Group({
   loaderData,
@@ -33,9 +34,14 @@ export default function Group({
 
   const [shareMember, setShareMember] = useState<string[]>([]);
   const [payer, setPayer] = useState('');
-  const [paymentList, setPaymentList] = useState<Payment[]>([]);
+  const [paymentList, setPaymentList] = useState<Payment[]>(group.paymentList);
   const paymentNametRef = useRef<HTMLInputElement>(null);
   const paymentCostRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setPaymentList(group.paymentList);
+  }, [group.paymentList]);
+
 
   const handleButtonClick = (msg: String) => setModalOpen(false);
   const handleModalSubmit = (msg: String) => {
@@ -49,6 +55,8 @@ export default function Group({
     setPaymentList(paymentList.concat(payment));
     
     setModalOpen(false);
+
+    updatePaymentList(group.uniqueId, paymentList);
   }
 
   const openModal = () => setModalOpen(true);
@@ -83,13 +91,13 @@ export default function Group({
         <div>
           <div>
             {
-              paymentList.map((payment: Payment) => (
-                <div>
+              paymentList.map((payment: Payment, index: number) => (
+                <div key={index}>
                   <div>{payment.name}</div>
                   <div>{payment.cost.toString()}</div>
                   <div>{payment.payer}</div>
                   <div>
-                    {payment.shareMember.map((member: String)=>(<div>{member}</div>))}
+                    {payment.shareMember.map((member: String, memberIndex: number)=>(<div key={memberIndex}>{member}</div>))}
                   </div>
                 </div>
               ))

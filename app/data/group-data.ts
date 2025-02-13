@@ -4,12 +4,15 @@ import sortBy from "sort-by";
 import invariant from "tiny-invariant";
 import { v4 as uuidv4 } from 'uuid';
 
+export type Payment = {name: String, payer: String, cost: Number, shareMember: Array<String>}
+
 type GroupMutation = {
   uniqueId?: string;
   name?: string;
   description?: string;
   favorite?: boolean;
   members?: Array<String>;
+  paymentList?: Array<Payment>;
 };
 
 export type GroupRecord = GroupMutation & {
@@ -44,6 +47,7 @@ const fakeGroups = {
     const createdAt = new Date().toISOString();
     const newGroup = { uniqueId, createdAt, ...values };
     newGroup.members = ["You"];
+    newGroup.paymentList = [];
     fakeGroups.records[uniqueId] = newGroup;
     return newGroup;
   },
@@ -88,6 +92,19 @@ export async function updateGroup(uniqueId: string, updates: GroupMutation, memb
     throw new Error(`No group found for ${uniqueId}`);
   }
   await fakeGroups.set(uniqueId, { ...group, ...updates , ...members});
+  return group;
+}
+
+export async function updatePaymentList(uniqueId: string, paymentList: Payment[]) {
+  // console.log(fakeGroups);
+  Object.entries(fakeGroups.records).forEach(([key, value]) => {
+    console.log(`${key}: ${value}`);
+  });
+  const group = await fakeGroups.get(uniqueId);
+  if (!group) {
+    throw new Error(`No group found for ${uniqueId}`);
+  }
+  await fakeGroups.set(uniqueId, { ...group, ...paymentList});
   return group;
 }
 
