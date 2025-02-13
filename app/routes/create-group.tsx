@@ -5,6 +5,7 @@ import { useRef, useState, type JSXElementConstructor, type ReactElement, type R
 
 import "./create-group.css";
 import { getContact } from "../data";
+import type { GroupBase } from "react-select";
 
 export async function action({
   params,
@@ -19,10 +20,12 @@ export async function action({
     }
     const group = await createEmptyGroup();
     const updates = Object.fromEntries(formData);
-    
-    if (updates.members) {
+
+    let members = group.members ?? [];
+
+    if (updates.membersString) {
       try {
-        updates.members = JSON.parse(updates.members as string);
+        JSON.parse(updates.membersString as string).map((member: string) => members.push(member));
       } catch (error) {
         console.error('Error parsing members:', error);
       }
@@ -32,7 +35,7 @@ export async function action({
     {
       return;
     }
-    await updateGroup(group.uniqueId, updates);
+    await updateGroup(group.uniqueId, updates, members);
     return redirect(`/groups/${group.uniqueId}`);
 }
 
@@ -106,7 +109,7 @@ export default function CreateGroup({
               onClick={handleAddMember}
               >Add member</div>
             </div>
-            <input type="hidden" name="members" value={JSON.stringify(members)} />
+            <input type="hidden" name="membersString" value={JSON.stringify(members)} />
             {
               members.map((member: string, index: number) => (
                 <div className="group-member-container" key={index}>

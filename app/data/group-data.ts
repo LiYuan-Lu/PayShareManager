@@ -82,12 +82,12 @@ export async function getGroup(uniqueId: string) {
   return fakeGroups.get(uniqueId);
 }
 
-export async function updateGroup(uniqueId: string, updates: GroupMutation) {
+export async function updateGroup(uniqueId: string, updates: GroupMutation, members: String[]) {
   const group = await fakeGroups.get(uniqueId);
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);
   }
-  await fakeGroups.set(uniqueId, { ...group, ...updates });
+  await fakeGroups.set(uniqueId, { ...group, ...updates , ...members});
   return group;
 }
 
