@@ -37,6 +37,10 @@ export default [
         "groups/:uniqueId/destroy", 
         "routes/destroy-group.tsx"
     ),
+    route(
+        "groups/:uniqueId/add-payment", 
+        "routes/add-payment.tsx"
+    ),
   ]),
     route("about", "routes/about.tsx"),
 ] satisfies RouteConfig;

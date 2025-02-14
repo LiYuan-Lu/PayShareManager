@@ -83,20 +83,24 @@ export async function createEmptyGroup() {
 }
 
 export async function getGroup(uniqueId: string) {
+  const group = await fakeGroups.get(uniqueId); 
+  if (!group) {
+    console.log(`No group found for ${uniqueId}`);
+  }
   return fakeGroups.get(uniqueId);
 }
 
-export async function updateGroup(uniqueId: string, updates: GroupMutation, members: String[]) {
+export async function updateGroup(uniqueId: string, updates: GroupMutation, members?: String[]) {
   const group = await fakeGroups.get(uniqueId);
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);
   }
-  await fakeGroups.set(uniqueId, { ...group, ...updates , ...members});
+  const updatedGroup = members ? { ...group, ...updates, members } : { ...group, ...updates };
+  await fakeGroups.set(uniqueId, updatedGroup);
   return group;
 }
 
 export async function updatePaymentList(uniqueId: string, paymentList: Payment[]) {
-  // console.log(fakeGroups);
   Object.entries(fakeGroups.records).forEach(([key, value]) => {
     console.log(`${key}: ${value}`);
   });
@@ -104,7 +108,7 @@ export async function updatePaymentList(uniqueId: string, paymentList: Payment[]
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);
   }
-  await fakeGroups.set(uniqueId, { ...group, ...paymentList});
+  await fakeGroups.set(uniqueId, { ...group, paymentList});
   return group;
 }
 

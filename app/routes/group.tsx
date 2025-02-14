@@ -1,4 +1,4 @@
-import { Form } from "react-router";
+import { Form, redirect } from "react-router";
 import { useState, useRef, useEffect } from "react";
 
 import { getGroup, updatePaymentList} from "../data/group-data";
@@ -8,6 +8,9 @@ import type { Route } from "./+types/contact";
 import Modal from "../components/modal";
 import { createPortal } from "react-dom";
 import Select from 'react-select'
+
+type PayerOption = {label: string, value: string}
+type ShareMemberOption = {label: string, value: string};
 
 export async function loader({ params }: Route.LoaderArgs) {
   if(!params.uniqueId)
@@ -21,13 +24,9 @@ export async function loader({ params }: Route.LoaderArgs) {
   return { group };
 }
 
-type PayerOption = {label: String, value: String}
-type ShareMemberOption = {label: String, value: String};
-// type Payment = {name: String, payer: String, cost: Number, shareMember: Array<String>}
-
 export default function Group({
   loaderData,
-}: Route.ComponentProps) {
+}: { loaderData: { group: any } }) {
   const { group } = loaderData;
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,25 +38,11 @@ export default function Group({
   const paymentCostRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setPaymentList(group.paymentList);
-  }, [group.paymentList]);
+    setModalOpen(false);
+  }, [group]);
 
 
   const handleButtonClick = (msg: String) => setModalOpen(false);
-  const handleModalSubmit = (msg: String) => {
-    const payment: Payment = {
-      name: paymentNametRef.current?.value ?? "", 
-      payer: payer,
-      cost: Number(paymentCostRef.current?.value),
-      shareMember: shareMember
-    };
-
-    setPaymentList(paymentList.concat(payment));
-    
-    setModalOpen(false);
-
-    updatePaymentList(group.uniqueId, paymentList);
-  }
 
   const openModal = () => setModalOpen(true);
 
@@ -110,8 +95,9 @@ export default function Group({
           createPortal(
             <Modal
               closeModal={handleButtonClick}
-              onSubmit={handleModalSubmit}
+              onSubmit={handleButtonClick}
               onCancel={handleButtonClick}
+              postTarget={`/groups/${group.uniqueId}/add-payment`}
             >
               <h1>Payment</h1>
               <br/>
