@@ -41,6 +41,10 @@ export default function Group({
     setModalOpen(false);
   }, [group]);
 
+  useEffect(() => {
+    setPaymentList(group.paymentList);
+  }, [group.paymentList])
+
 
   const handleButtonClick = (msg: String) => setModalOpen(false);
 
@@ -127,12 +131,10 @@ export default function Group({
                 <p>Paid by</p>
                 <Select 
                   options={options} 
-                  onChange={(option: PayerOption | null) => setPayer(option?.value?? "" )}
                 />
                 <p>Shared by</p>
                 <Select 
                   options={options} 
-                  onChange={(options: readonly ShareMemberOption[]) => setShareMember(options.map(option => option.value))}
                   isMulti
                 />
               </div>
