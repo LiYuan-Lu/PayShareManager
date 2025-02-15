@@ -7,20 +7,25 @@ import { v4 as uuidv4 } from 'uuid';
 export type Payment = 
 {
   name: string, 
-  payer: string, 
+  payer: Member, 
   cost: Number, 
-  shareMember: Array<string>
+  shareMember: Array<Member>
   createdAt?: string;
 };
 
 export type PaymentList = Map<number, Payment>;
+
+export interface Member {
+  uniqueId: string;
+  name: string;
+}
 
 type GroupMutation = {
   uniqueId?: string;
   name?: string;
   description?: string;
   favorite?: boolean;
-  members?: Array<string>;
+  members?: Array<Member>;
   paymentList?: PaymentList;
   paymentNextId?: number;
 };
@@ -56,7 +61,7 @@ const fakeGroups = {
     const uniqueId = await this.getUniqueId();
     const createdAt = new Date().toISOString();
     const newGroup = { uniqueId, createdAt, ...values };
-    newGroup.members = ["You"];
+    newGroup.members = [{uniqueId: "0", name: "You"}];
     newGroup.paymentList = new Map<number, Payment>();
     newGroup.paymentNextId = 0;
     fakeGroups.records[uniqueId] = newGroup;
@@ -101,7 +106,7 @@ export async function getGroup(uniqueId: string) {
   return fakeGroups.get(uniqueId);
 }
 
-export async function updateGroup(uniqueId: string, updates: GroupMutation, members?: string[]) {
+export async function updateGroup(uniqueId: string, updates: GroupMutation, members?: Member[]) {
   const group = await fakeGroups.get(uniqueId);
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);
@@ -168,3 +173,19 @@ export async function deleteGroup(uniqueId: string) {
     ...group,
   });
 });
+
+export async function getMember(uniqueId: string, memberId: string) {
+  const group = await fakeGroups.get(uniqueId);
+  if (!group) {
+    throw new Error(`No group found for ${uniqueId}`);
+  }
+
+  if (!group.members) {
+    throw new Error(`No members found for ${uniqueId}`);
+  }
+  const member = group.members.find((member) => member.uniqueId === memberId);
+  if (!member) {
+    throw new Error(`No member found for ${memberId}`);
+  }
+  return member;
+}

@@ -2,6 +2,7 @@ import { Form } from "react-router";
 import { useState, useRef, useEffect, type JSX } from "react";
 
 import { getGroup} from "../data/group-data";
+import type { Member } from "../data/group-data";
 import type { Payment, PaymentList } from "../data/group-data";
 import type { Route } from "./+types/contact";
 
@@ -45,8 +46,8 @@ export default function Group({
 
   const openModal = () => setModalOpen(true);
 
-  const options = group.members.map((member: string) => {
-    return {label: member, value: member};
+  const options = group.members.map((member: Member) => {
+    return {label: member.name, value: member.uniqueId};
   });
 
   return (
@@ -66,9 +67,9 @@ export default function Group({
 
         <h2>Members</h2>
         {
-          Array.isArray(group.members) ? group.members.map((member: string, index: number) => (
+          Array.isArray(group.members) ? group.members.map((member: Member, index: number) => (
             <div className="group-member-container" key={index}>
-              <div className="group-member-item group-new-member">{member}</div>
+              <div className="group-member-item group-new-member">{member.name}</div>
             </div>
         )) : null}
         <h2>Payment list</h2>
@@ -81,9 +82,9 @@ export default function Group({
                 <div key={id}>
                   <div>{payment.name}</div>
                   <div>{payment.cost.toString()}</div>
-                  <div>{payment.payer}</div>
+                  <div>{payment.payer.name}</div>
                   <div>
-                    {payment.shareMember.map((member: string, memberIndex: number)=>(<div key={memberIndex}>{member}</div>))}
+                    {payment.shareMember.map((member: Member, memberIndex: number)=>(<div key={memberIndex}>{member.name}</div>))}
                   </div>
                   <div>
                     <Form action={`/groups/${group.uniqueId}/delete-payment/${id}`} method="post">
@@ -134,10 +135,12 @@ export default function Group({
               <div>
                 <p>Paid by</p>
                 <Select 
+                  name="payer"
                   options={options} 
                 />
                 <p>Shared by</p>
-                <Select 
+                <Select
+                  name="shareMember"
                   options={options} 
                   isMulti
                 />
