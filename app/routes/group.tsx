@@ -10,6 +10,8 @@ import Modal from "../components/modal";
 import { createPortal } from "react-dom";
 import Select from 'react-select'
 
+import "./group.css";
+
 export async function loader({ params }: Route.LoaderArgs) {
   if(!params.uniqueId)
   {
@@ -65,6 +67,29 @@ export default function Group({
         </h1>
         {group.description ? <p>{group.description}</p> : null}
 
+
+        <div className="group-edit">
+          <Form action="edit">
+            <button type="submit">Edit</button>
+          </Form>
+
+          <Form
+            action="destroy"
+            method="post"
+            onSubmit={(event) => {
+              const response = confirm(
+                "Please confirm you want to delete this record."
+              );
+              if (!response) {
+                event.preventDefault();
+              }
+            }}
+          >
+            <button type="submit">Delete</button>
+          </Form>
+        </div>
+
+
         <h2>Members</h2>
         {
           Array.isArray(group.members) ? group.members.map((member: Member, index: number) => (
@@ -74,12 +99,15 @@ export default function Group({
         )) : null}
         <h2>Payment list</h2>
         <div>
+          <button className="btn btn-open" onClick={openModal}>
+            Add Payment
+          </button>
           <div>
             {(() => {
               const divElements: JSX.Element[] = [];
               paymentList && paymentList.forEach((payment: Payment, id: number) => (
                 divElements.push(
-                <div key={id}>
+                <div className="payment-container" key={id}>
                   <div>{payment.name}</div>
                   <div>{payment.cost.toString()}</div>
                   <div>{payment.payer.name}</div>
@@ -97,9 +125,6 @@ export default function Group({
               return divElements;
             })()}
           </div>
-          <button className="btn btn-open" onClick={openModal}>
-            Add Payment
-          </button>
           {modalOpen &&
           createPortal(
             <Modal
@@ -128,7 +153,7 @@ export default function Group({
                   defaultValue={0}
                   name="cost"
                   placeholder="Cost"
-                  type="number"
+                  type="text"
                   ref={paymentCostRef}
                 />
               </p>
@@ -148,28 +173,6 @@ export default function Group({
             </Modal>,
             document.body
           )}
-        </div>
-        
-
-        <div>
-          <Form action="edit">
-            <button type="submit">Edit</button>
-          </Form>
-
-          <Form
-            action="destroy"
-            method="post"
-            onSubmit={(event) => {
-              const response = confirm(
-                "Please confirm you want to delete this record."
-              );
-              if (!response) {
-                event.preventDefault();
-              }
-            }}
-          >
-            <button type="submit">Delete</button>
-          </Form>
         </div>
       </div>
       <div id="payment-list">

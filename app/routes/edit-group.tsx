@@ -2,6 +2,7 @@ import { Form, redirect, useNavigate } from "react-router";
 import type { Route } from "./+types/edit-group";
 
 import { getGroup, updateGroup } from "../data/group-data";
+import "./create-group.css";
 
 export async function action({
   params,
@@ -28,7 +29,7 @@ export default function EditGroup({
   const navigate = useNavigate();
 
   return (
-    <Form key={group.uniqueId} id="contact-form" method="post">
+    <Form key={group.uniqueId} method="post" className="group-form">
       <p>
         <span>Name</span>
         <input
@@ -39,7 +40,7 @@ export default function EditGroup({
           type="text"
         />
       </p>
-      <label>
+      <p>
         <span>Desription</span>
         <input
           aria-label="Description"
@@ -48,7 +49,7 @@ export default function EditGroup({
           placeholder="Description"
           type="text"
         />
-      </label>
+      </p>
       <input type="hidden" name="uniqueId" value={group.uniqueId}></input>
       <p>
         <button type="submit">Save</button>

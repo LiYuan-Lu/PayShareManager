@@ -1,29 +1,85 @@
-.group-member-list-container {
-    display: flex;
-    flex-direction: column;
+p span {
+  margin-right: 0.5rem;
 }
 
-.group-member-container {  
+#group-member {
+  border-top: 2px solid #ccc; /* A light-gray line */
+  margin-top: 1rem;          /* Space above the line */
+  padding-top: 1rem;         /* Space below the line */
+}
+.group-member-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem; /* optional spacing between items */
+
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Light border */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  padding: 8px;  /* Padding inside the container */
+  border-radius: 4px; /* Optional rounded corners */
+  margin-bottom: 0.5rem; /* Space between items */
+}
+
+.group-member-add {
     display: flex;
     flex-direction: row;
-    justify-content: space-around;
-}
-
-.group-member-item {
-    margin-right: 10px;
-    margin-top: 10px;
-}
-
-.group-new-member {
-    text-align: left;
-}
-
-#add-member-button {
-    margin-top: 20px;
-    color: blue;
+    justify-content: space-between;
+    align-items:center;
+    
+    gap: 0.5rem; /* optional spacing between items */
 }
 
 .delete-group-member-button {
-    margin-top: 10px;
-    color: red;
+  cursor: pointer;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #ff4d4f; /* Red background indicates delete */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  text-align: center;
+  transition: background-color 0.3s ease;
+  font-weight: 500;
+  margin-top: 0.5rem; /* Optional: adds space above the button */
+}
+
+.delete-group-member-button:hover {
+  background-color: #ff7875;
+}
+
+.add-group-member-button {
+  cursor: pointer;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #3992ff; /* Blue background */
+  color: white;
+  text-align: center;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  margin-top: 0.5rem;
+}
+
+.add-group-member-button:hover {
+  background-color: #66a8ff; /* Lighter blue on hover */
+}
+
+.group-form p button:first-of-type {
+  margin-right: 1rem; /* Adds space between Save (first button) and Cancel (second button) */
+}
+
+#group-member label span {
+  display: block;       /* Make sure it takes a full line */
+  margin-bottom: 1rem;  /* Adjust as needed for spacing */
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #3992ff;             /* Blue color for the heading */
+  border-bottom: 2px solid #ccc; /* Bottom border for separation */
+  margin: 1rem 0;             /* Top and bottom margin */
+  padding-bottom: 0.5rem;     /* Padding below text and border */
 }

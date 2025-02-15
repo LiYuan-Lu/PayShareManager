@@ -30,7 +30,7 @@ export async function action({
         uniqueId: item.value,
         name: item.label,
       }));
-      members = [...newMembers];
+      members = [...members, ...newMembers];
     } catch (error) {
       console.error("Error parsing members:", error);
     }
@@ -79,7 +79,8 @@ export default function CreateGroup({
   };
 
     return (
-    <Form id="contact-form" method="post">
+    <Form className="group-form" method="post">
+      <h2>Display</h2>
       <p>
         <span>Name</span>
         <input
@@ -90,7 +91,7 @@ export default function CreateGroup({
           type="text"
         />
       </p>
-      <label>
+      <p>
         <span>Desription</span>
         <input
           aria-label="Description"
@@ -99,16 +100,27 @@ export default function CreateGroup({
           placeholder="Description"
           type="text"
         />
-      </label>
+      </p>
       <div id="group-member">
         <label>
-          <span>Group member</span>
+          <h2>Group members</h2>
           <div className="group-member-list-container">
             <div className="group-member-container">
               <div className="group-member-item">You</div>
-              <div className="group-member-item">test@test.com</div>
             </div>
-            <div className="group-member-container">
+            {
+              members.map((member: any, index: number) => (
+                <div className="group-member-container" key={index}>
+                  <div className="group-member-item group-new-member">{member.label}</div>
+                  <div
+                  id="delete-member"
+                  className="group-memeber-item delete-group-member-button"
+                  onClick={ ()=>handleDelete(index) }
+                  >Delete</div>
+                </div>
+            ))}
+
+            <div className="group-member-add">
               <div>
                 <Select 
                   options={loaderData.friends.map((friend: any) => ({value: friend.uniqueId, label: friend.name}))} 
@@ -116,22 +128,11 @@ export default function CreateGroup({
                 />
               </div>
               <br/>
-              <div className="group-member-item group-member-button" id="add-member-button" 
+              <div className="group-member-item add-group-member-button" id="add-member-button" 
               onClick={handleAddMember}
               >Add member</div>
             </div>
             <input type="hidden" name="membersString" value={JSON.stringify(members)} />
-            {
-              members.map((member: any, index: number) => (
-                <div className="group-member-container" key={index}>
-                  <div className="group-member-item group-new-member">{member.label}</div>
-                  <div
-                  id="delete-member" 
-                  className="group-memeber-item delete-group-member-button"
-                  onClick={ ()=>handleDelete(index) }
-                  >Delete</div>
-                </div>
-            ))}
           </div>
         </label>
       </div>

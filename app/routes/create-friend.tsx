@@ -2,6 +2,8 @@ import { Form, redirect, useNavigate } from "react-router";
 import type { Route } from "./+types/create-friend";
 import { updateFriend, createEmptyFriend } from "../data/friend-data";
 
+import "./create-group.css";
+
 export async function action({
   params,
   request,
@@ -31,7 +33,7 @@ export default function CreateFriend({
 }: Route.ComponentProps) {
     const navigate = useNavigate();
     return (
-    <Form id="friend-form" method="post">
+    <Form id="friend-form" className="group-form" method="post">
         <p>
         <span>Name</span>
         <input
@@ -42,7 +44,7 @@ export default function CreateFriend({
             required
         />
         </p>
-        <label>
+        <p>
             <span>Email</span>
             <input
             aria-label="Email"
@@ -52,7 +54,7 @@ export default function CreateFriend({
             required
             pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
             />
-        </label>
+        </p>
         <div id="last-element">
 
         </div>
