@@ -1,11 +1,10 @@
 export default function Home() {
   return (
     <p id="index-page">
-      This is a demo for React Router.
-      <br />
+      This is a web application designed to record who paid what amount and to calculate how to evenly split the bill.      <br />
       Check out{" "}
-      <a href="https://reactrouter.com">
-        the docs at reactrouter.com
+      <a href="https://github.com/LiYuan-Lu/PayShareManager">
+        github page
       </a>
       .
     </p>

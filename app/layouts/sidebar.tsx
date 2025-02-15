@@ -45,7 +45,7 @@ export default function SidebarLayout({
     <>
       <div id="sidebar">
         <h1>
-          <Link to="about">React Router Contacts</Link>
+          <Link to="about">Pay Share Manager</Link>
         </h1>
         <div>
           <Form id="search-form" 
