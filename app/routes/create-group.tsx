@@ -1,11 +1,9 @@
 import { Form, redirect, useNavigate } from "react-router";
 import type { Route } from "./+types/create-group";
 import { updateGroup, createEmptyGroup } from "../data/group-data";
-import { useRef, useState, type JSXElementConstructor, type ReactElement, type ReactNode, type ReactPortal } from "react";
+import { useRef, useState} from "react";
 
 import "./create-group.css";
-import { getContact } from "../data";
-import type { GroupBase } from "react-select";
 
 export async function action({
   params,
@@ -44,7 +42,6 @@ export default function CreateGroup({
 }: Route.ComponentProps) {
   const navigate = useNavigate();
 
-  // let groupMember: { first: string | undefined; last: string | undefined; }[] = [];
   const [members, setMembers] = useState<any>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
