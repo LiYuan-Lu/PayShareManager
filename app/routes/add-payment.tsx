@@ -1,5 +1,5 @@
 import { redirect } from "react-router";
-import { getGroup, updatePaymentList } from "../data/group-data";
+import { addPayment } from "../data/group-data";
 import type { Payment } from "../data/group-data";
 import type { Route } from "./+types/contact";
 
@@ -10,22 +10,14 @@ export async function action({ params, request }: Route.ActionArgs) {
     payer: formData.get("payer") as string,
     cost: Number(formData.get("cost")),
     shareMember: formData.getAll("shareMember") as string[],
+    createdAt : new Date().toISOString(),
   };
 
   if(!params.uniqueId)
   {
     return;
   }
-
-  const group = await getGroup(params.uniqueId);
-  if (!group) {
-    throw new Response("Not Found", { status: 404 });
-  }
-
-  const updatedPaymentList = [...(group.paymentList || []), payment];
-
-  console.log("updatedPaymentList", updatedPaymentList);
-  await updatePaymentList(params.uniqueId, updatedPaymentList);
+  await addPayment(params.uniqueId, payment);
 
   return redirect(`/groups/${params.uniqueId}`);
 }

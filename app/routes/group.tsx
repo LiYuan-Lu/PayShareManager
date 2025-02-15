@@ -1,16 +1,13 @@
-import { Form, redirect } from "react-router";
-import { useState, useRef, useEffect } from "react";
+import { Form } from "react-router";
+import { useState, useRef, useEffect, type JSX } from "react";
 
-import { getGroup, updatePaymentList} from "../data/group-data";
-import type { Payment } from "../data/group-data";
+import { getGroup} from "../data/group-data";
+import type { Payment, PaymentList } from "../data/group-data";
 import type { Route } from "./+types/contact";
 
 import Modal from "../components/modal";
 import { createPortal } from "react-dom";
 import Select from 'react-select'
-
-type PayerOption = {label: string, value: string}
-type ShareMemberOption = {label: string, value: string};
 
 export async function loader({ params }: Route.LoaderArgs) {
   if(!params.uniqueId)
@@ -31,9 +28,7 @@ export default function Group({
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  const [shareMember, setShareMember] = useState<string[]>([]);
-  const [payer, setPayer] = useState('');
-  const [paymentList, setPaymentList] = useState<Payment[]>(group.paymentList);
+  const [paymentList, setPaymentList] = useState<PaymentList>();
   const paymentNametRef = useRef<HTMLInputElement>(null);
   const paymentCostRef = useRef<HTMLInputElement>(null);
 
@@ -79,18 +74,27 @@ export default function Group({
         <h2>Payment list</h2>
         <div>
           <div>
-            {
-              paymentList.map((payment: Payment, index: number) => (
-                <div key={index}>
+            {(() => {
+              const divElements: JSX.Element[] = [];
+              paymentList && paymentList.forEach((payment: Payment, id: number) => (
+                divElements.push(
+                <div key={id}>
                   <div>{payment.name}</div>
                   <div>{payment.cost.toString()}</div>
                   <div>{payment.payer}</div>
                   <div>
-                    {payment.shareMember.map((member: String, memberIndex: number)=>(<div key={memberIndex}>{member}</div>))}
+                    {payment.shareMember.map((member: string, memberIndex: number)=>(<div key={memberIndex}>{member}</div>))}
+                  </div>
+                  <div>
+                    <Form action={`/groups/${group.uniqueId}/delete-payment/${id}`} method="post">
+                      <button type="submit">Delete</button>
+                    </Form>
                   </div>
                 </div>
-              ))
-            }
+                )
+              ));
+              return divElements;
+            })()}
           </div>
           <button className="btn btn-open" onClick={openModal}>
             Add Payment

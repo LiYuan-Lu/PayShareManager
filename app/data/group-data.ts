@@ -4,15 +4,25 @@ import sortBy from "sort-by";
 import invariant from "tiny-invariant";
 import { v4 as uuidv4 } from 'uuid';
 
-export type Payment = {name: String, payer: String, cost: Number, shareMember: Array<String>}
+export type Payment = 
+{
+  name: string, 
+  payer: string, 
+  cost: Number, 
+  shareMember: Array<string>
+  createdAt?: string;
+};
+
+export type PaymentList = Map<number, Payment>;
 
 type GroupMutation = {
   uniqueId?: string;
   name?: string;
   description?: string;
   favorite?: boolean;
-  members?: Array<String>;
-  paymentList?: Array<Payment>;
+  members?: Array<string>;
+  paymentList?: PaymentList;
+  paymentNextId?: number;
 };
 
 export type GroupRecord = GroupMutation & {
@@ -47,7 +57,8 @@ const fakeGroups = {
     const createdAt = new Date().toISOString();
     const newGroup = { uniqueId, createdAt, ...values };
     newGroup.members = ["You"];
-    newGroup.paymentList = [];
+    newGroup.paymentList = new Map<number, Payment>();
+    newGroup.paymentNextId = 0;
     fakeGroups.records[uniqueId] = newGroup;
     return newGroup;
   },
@@ -90,7 +101,7 @@ export async function getGroup(uniqueId: string) {
   return fakeGroups.get(uniqueId);
 }
 
-export async function updateGroup(uniqueId: string, updates: GroupMutation, members?: String[]) {
+export async function updateGroup(uniqueId: string, updates: GroupMutation, members?: string[]) {
   const group = await fakeGroups.get(uniqueId);
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);
@@ -100,10 +111,33 @@ export async function updateGroup(uniqueId: string, updates: GroupMutation, memb
   return group;
 }
 
-export async function updatePaymentList(uniqueId: string, paymentList: Payment[]) {
-  Object.entries(fakeGroups.records).forEach(([key, value]) => {
-    console.log(`${key}: ${value}`);
-  });
+export async function addPayment(uniqueId: string, payment: Payment) {
+  const group = await fakeGroups.get(uniqueId);
+  if (!group) {
+    throw new Error(`No group found for ${uniqueId}`);
+  }
+
+  if (!group.paymentList) {
+    group.paymentList = new Map<number, Payment>();
+  }
+  if (!group.paymentNextId) {
+    group.paymentNextId = 0;
+  }
+  group.paymentList.set(group.paymentNextId++, payment);
+}
+
+export async function deletePayment(uniqueId: string, paymentId: number) {
+  const group = await fakeGroups.get(uniqueId);
+  if (!group) {
+    throw new Error(`No group found for ${uniqueId}`);
+  }
+  if (!group.paymentList) {
+    group.paymentList = new Map<number, Payment>();
+  }
+  group.paymentList.delete(paymentId);
+}
+
+export async function updatePaymentList(uniqueId: string, paymentList: PaymentList) {
   const group = await fakeGroups.get(uniqueId);
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);

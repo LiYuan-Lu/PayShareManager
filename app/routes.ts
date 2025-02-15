@@ -41,6 +41,10 @@ export default [
         "groups/:uniqueId/add-payment", 
         "routes/add-payment.tsx"
     ),
+    route(
+        "groups/:uniqueId/delete-payment/:paymentId", 
+        "routes/delete-payment.tsx"
+    ),
   ]),
     route("about", "routes/about.tsx"),
 ] satisfies RouteConfig;
