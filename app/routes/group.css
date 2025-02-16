@@ -32,3 +32,49 @@
     flex-direction: row;
     gap: 0.5rem;
 }
+
+.delete-button {
+  cursor: pointer;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #ff4d4f; /* Red background indicates delete */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  text-align: center;
+  transition: background-color 0.3s ease;
+  font-weight: 500;
+  margin-top: 0.5rem; /* Optional: adds space above the button */
+}
+
+.delete-button:hover {
+  background-color: #ff7875;
+}
+
+.add-button {
+  cursor: pointer;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #3992ff; /* Blue background */
+  color: white;
+  text-align: center;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  margin-top: 0.5rem;
+}
+
+.add-button:hover {
+  background-color: #66a8ff; /* Lighter blue on hover */
+}
+
+.bottom-space {
+  margin-bottom: 1rem;
+}
+
+.payment-intructions {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.5rem;
+}

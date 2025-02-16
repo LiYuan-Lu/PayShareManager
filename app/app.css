@@ -286,3 +286,7 @@ i {
   animation: spin 1s infinite linear;
   margin-bottom: 1rem;
 }
+
+p span {
+  margin-right: 0.5rem;
+}
