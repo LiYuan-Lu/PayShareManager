@@ -78,3 +78,8 @@
   color: #666;
   margin-top: 0.5rem;
 }
+
+#payment-list {
+  max-height: 30vh; /* Adjust as needed; 60vh makes it take up to 60% of viewport height */
+  overflow-y: auto; /* Enables vertical scrolling */
+}

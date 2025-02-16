@@ -3,14 +3,16 @@ import { matchSorter } from "match-sorter";
 import sortBy from "sort-by";
 import invariant from "tiny-invariant";
 import { v4 as uuidv4 } from 'uuid';
+import { getFriends } from "./friend-data";
 
 export type Payment = 
 {
   name: string, 
   payer: Member, 
-  cost: Number, 
+  cost: number, 
   shareMember: Array<Member>
   createdAt?: string;
+  youShouldPay?: number;
 };
 
 export type PaymentList = Map<number, Payment>;
@@ -33,6 +35,10 @@ type GroupMutation = {
 export type GroupRecord = GroupMutation & {
   createdAt: string;
 };
+
+const kUserUiqueId = "0";
+const kUserName = "You";
+const kUser = {uniqueId: kUserUiqueId, name: kUserName};
 
 const fakeGroups = {
   records: {} as Record<string, GroupRecord>,
@@ -61,7 +67,7 @@ const fakeGroups = {
     const uniqueId = await this.getUniqueId();
     const createdAt = new Date().toISOString();
     const newGroup = { uniqueId, createdAt, ...values };
-    newGroup.members = [{uniqueId: "0", name: "You"}];
+
     newGroup.paymentList = new Map<number, Payment>();
     newGroup.paymentNextId = 0;
     fakeGroups.records[uniqueId] = newGroup;
@@ -95,6 +101,7 @@ export async function getGroups(query?: string | null) {
 
 export async function createEmptyGroup() {
   const group = await fakeGroups.create({});
+  group.members = [kUser];
   return group;
 }
 
@@ -116,6 +123,28 @@ export async function updateGroup(uniqueId: string, updates: GroupMutation, memb
   return group;
 }
 
+function calculateYouShouldPay(payment: Payment) {
+  const isSharedByYou = payment.shareMember.includes(kUser);
+  const isPayByYou = payment.payer === kUser;
+
+  if(!isSharedByYou && isPayByYou) {
+    return -payment.cost
+  }
+
+  if(!isSharedByYou) {
+    return 0;
+  }
+
+  const shareMemberCount = payment.shareMember.length;
+  const shareCost = payment.cost / shareMemberCount;
+
+  if(isPayByYou) {
+    return - (payment.cost - shareCost);
+  }
+
+  return shareCost;
+}
+
 export async function addPayment(uniqueId: string, payment: Payment) {
   const group = await fakeGroups.get(uniqueId);
   if (!group) {
@@ -128,6 +157,8 @@ export async function addPayment(uniqueId: string, payment: Payment) {
   if (!group.paymentNextId) {
     group.paymentNextId = 0;
   }
+
+  payment.youShouldPay = calculateYouShouldPay(payment);
   group.paymentList.set(group.paymentNextId++, payment);
 }
 
@@ -142,15 +173,6 @@ export async function deletePayment(uniqueId: string, paymentId: number) {
   group.paymentList.delete(paymentId);
 }
 
-export async function updatePaymentList(uniqueId: string, paymentList: PaymentList) {
-  const group = await fakeGroups.get(uniqueId);
-  if (!group) {
-    throw new Error(`No group found for ${uniqueId}`);
-  }
-  await fakeGroups.set(uniqueId, { ...group, paymentList});
-  return group;
-}
-
 export async function deleteGroup(uniqueId: string) {
   fakeGroups.destroy(uniqueId);
 }
@@ -158,17 +180,17 @@ export async function deleteGroup(uniqueId: string) {
 [
   {
     name: "Group 1",
-    description: "This is group 1"
+    description: "This is group 1",
+    members: [kUser],
   },
-  {
-    name: "Group 2",
-    description: "This is group 2"
-  },
-  {
-    name: "Group 3",
-    description: "This is group 3"
-  },
-].forEach((group) => {
+].forEach(async (group) => {
+  const friends = await getFriends();
+  let members = [];
+  friends.forEach((friend) => {
+    members.push({uniqueId: friend.uniqueId, name: friend.name});
+  });
+  members.push(kUser);
+  group.members = members;
   fakeGroups.create({
     ...group,
   });

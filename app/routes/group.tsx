@@ -99,10 +99,18 @@ export default function Group({
         )) : null}
         <h2>Payment list</h2>
         <div>
-          <button className="btn btn-open" onClick={openModal}>
+          <button className="add-button bottom-space" onClick={openModal}>
             Add Payment
           </button>
-          <div>
+          <div className="payment-container payment-intructions">
+            <div>Name</div>
+            <div>Cost</div>
+            <div>Payer</div>
+            <div>Shared by</div>
+            <div>You Shoud Pay</div>
+            <div>Action</div>
+          </div>
+          <div id="payment-list">
             {(() => {
               const divElements: JSX.Element[] = [];
               paymentList && paymentList.forEach((payment: Payment, id: number) => (
@@ -115,8 +123,11 @@ export default function Group({
                     {payment.shareMember.map((member: Member, memberIndex: number)=>(<div key={memberIndex}>{member.name}</div>))}
                   </div>
                   <div>
+                    {payment.youShouldPay}
+                  </div>
+                  <div>
                     <Form action={`/groups/${group.uniqueId}/delete-payment/${id}`} method="post">
-                      <button type="submit">Delete</button>
+                      <button type="submit" className="delete-button">Delete</button>
                     </Form>
                   </div>
                 </div>
