@@ -158,8 +158,12 @@ export async function addPayment(uniqueId: string, payment: Payment) {
     group.paymentNextId = 0;
   }
 
-  payment.youShouldPay = calculateYouShouldPay(payment);
-  group.paymentList.set(group.paymentNextId++, payment);
+  const paymentToSave: Payment = {
+    ...payment,
+    createdAt: payment.createdAt ?? new Date().toISOString(),
+  };
+  paymentToSave.youShouldPay = calculateYouShouldPay(paymentToSave);
+  group.paymentList.set(group.paymentNextId++, paymentToSave);
 }
 
 export async function deletePayment(uniqueId: string, paymentId: number) {
@@ -197,8 +201,20 @@ export async function updatePayment(uniqueId: string, paymentId: number, payment
     throw new Error(`No payment list found for ${uniqueId}`);
   }
 
-  payment.youShouldPay = calculateYouShouldPay(payment);
-  group.paymentList.set(paymentId, payment);
+  const existingPayment = group.paymentList.get(paymentId);
+  if (!existingPayment) {
+    throw new Error(`No payment found for ${paymentId}`);
+  }
+
+  const updatedPayment: Payment = {
+    ...existingPayment,
+    ...payment,
+    createdAt: existingPayment.createdAt ?? payment.createdAt ?? new Date().toISOString(),
+  };
+  updatedPayment.youShouldPay = calculateYouShouldPay(updatedPayment);
+  group.paymentList.set(paymentId, updatedPayment);
+
+  return updatedPayment;
 }
 
 export async function deleteGroup(uniqueId: string) {
