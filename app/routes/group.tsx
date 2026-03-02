@@ -92,6 +92,16 @@ export default function Group({
     }
     return "not involved";
   };
+  const getSummaryToneClass = (payment: Payment) => {
+    const youShouldPay = Number(payment.youShouldPay ?? 0);
+    if (youShouldPay > 0) {
+      return "payment-summary-borrowed";
+    }
+    if (youShouldPay < 0) {
+      return "payment-summary-lent";
+    }
+    return "payment-summary-neutral";
+  };
 
   const validatePaymentForm = () => {
     const errors: PaymentFormErrors = {};
@@ -165,22 +175,23 @@ export default function Group({
           <button className="add-button bottom-space" onClick={openModal}>
             Add Payment
           </button>
-          <div className="payment-container payment-intructions">
-            <div>Date</div>
-            <div>Payment</div>
-            <div>Summary</div>
-            <div>Action</div>
-          </div>
           <div id="payment-list">
             {(() => {
               const divElements: JSX.Element[] = [];
               paymentList && paymentList.forEach((payment: Payment, id: number) => (
                 divElements.push(
-                <div className="payment-container" key={id}>
-                  <div>{formatPaymentDate(payment.createdAt)}</div>
-                  <div>{payment.payer.name} paid {payment.cost.toFixed(2)}</div>
-                  <div>{getPaymentSummary(payment)}</div>
-                  <div>
+                <div className="payment-item" key={id}>
+                  <div className="payment-content">
+                    <div className="payment-meta">
+                      <span className="payment-date">{formatPaymentDate(payment.createdAt)}</span>
+                      <span className="payment-name">{payment.name}</span>
+                    </div>
+                    <div className="payment-detail">{payment.payer.name} paid {payment.cost.toFixed(2)}</div>
+                    <div className={`payment-summary ${getSummaryToneClass(payment)}`}>
+                      {getPaymentSummary(payment)}
+                    </div>
+                  </div>
+                  <div className="payment-actions">
                     <Form action={`/groups/${group.uniqueId}/edit-payment/${id}`}>
                       <button type="submit">Edit</button>
                     </Form>

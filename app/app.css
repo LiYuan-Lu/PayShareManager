@@ -247,17 +247,41 @@ form[action$="destroy"] button {
   padding-bottom: 0.4rem;
 }
 
-.nav-section-title h2 {
-  margin: 0;
-  font-size: 0.82rem;
+.nav-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0.15rem 0;
   color: var(--text-muted);
+  font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   font-weight: 700;
 }
 
-.nav-section-title-groups h2::before,
-.nav-section-title-friends h2::before {
+.nav-section-toggle:hover {
+  background: transparent;
+  border: none;
+  color: var(--text);
+}
+
+.nav-section-toggle:focus-visible {
+  border-radius: 10px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.nav-section-label {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-section-title-groups .nav-section-label::before,
+.nav-section-title-friends .nav-section-label::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -265,12 +289,17 @@ form[action$="destroy"] button {
   margin-right: 0.35rem;
 }
 
-.nav-section-title-groups h2::before {
+.nav-section-title-groups .nav-section-label::before {
   content: "👥";
 }
 
-.nav-section-title-friends h2::before {
+.nav-section-title-friends .nav-section-label::before {
   content: "🙂";
+}
+
+.nav-section-chevron {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .nav-cta {

@@ -94,6 +94,75 @@
   overflow-y: auto; /* Enables vertical scrolling */
 }
 
+.payment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 0.8rem 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+.payment-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.payment-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.payment-date {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+}
+
+.payment-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.payment-detail {
+  font-size: 0.94rem;
+  color: var(--text);
+}
+
+.payment-summary {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.payment-summary-borrowed {
+  color: #c62828;
+}
+
+.payment-summary-lent {
+  color: #0a7f3f;
+}
+
+.payment-summary-neutral {
+  color: var(--text-muted);
+}
+
+.payment-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
 .settlement-net-positive {
   color: #0a7f3f;
   font-weight: 700;

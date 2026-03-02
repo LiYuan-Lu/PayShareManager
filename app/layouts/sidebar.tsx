@@ -27,6 +27,8 @@ export default function SidebarLayout({
     const { friends, q, groups } = loaderData;
     const navigation = useNavigation();
     const [theme, setTheme] = useState<"light" | "dark">("light");
+    const [groupsOpen, setGroupsOpen] = useState(true);
+    const [friendsOpen, setFriendsOpen] = useState(true);
     const searching =
     navigation.location &&
     new URLSearchParams(navigation.location.search).has(
@@ -50,6 +52,25 @@ export default function SidebarLayout({
           : "light";
       setTheme(resolvedTheme);
       document.documentElement.setAttribute("data-theme", resolvedTheme);
+    }, []);
+
+    useEffect(() => {
+      const mediaQuery = window.matchMedia("(max-width: 980px)");
+      const collapseIfMobile = (isMobile: boolean) => {
+        if (isMobile) {
+          setGroupsOpen(false);
+          setFriendsOpen(false);
+        }
+      };
+
+      collapseIfMobile(mediaQuery.matches);
+
+      const handleChange = (event: MediaQueryListEvent) => {
+        collapseIfMobile(event.matches);
+      };
+
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
     }, []);
 
     const toggleTheme = () => {
@@ -83,69 +104,93 @@ export default function SidebarLayout({
         </div>
         <nav>
           <div className="nav-section-title nav-section-title-groups">
-            <h2>Groups</h2>
+            <button
+              aria-expanded={groupsOpen}
+              className="nav-section-toggle"
+              onClick={() => setGroupsOpen((prev) => !prev)}
+              type="button"
+            >
+              <span className="nav-section-label">Groups</span>
+              <span className="nav-section-chevron">{groupsOpen ? "▾" : "▸"}</span>
+            </button>
           </div>
-          <div className="nav-cta">
-            <Form method="post" action="/create-group">
-            <button type="submit" className="center nav-cta-button">New Group</button>
-            </Form>
-          </div>
-          {
-          groups.length ? (
-            <ul className="nav-list">
-              {groups.map((group) => (
-                <li key={group.uniqueId}>
-                  <NavLink
-                    to={`groups/${group.uniqueId}`}
-                  >
-                    {group.name}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="nav-empty">
-              <i> No groups</i>
-            </p>
-          )}
+          {groupsOpen ? (
+            <>
+              <div className="nav-cta">
+                <Form method="post" action="/create-group">
+                <button type="submit" className="center nav-cta-button">New Group</button>
+                </Form>
+              </div>
+              {
+              groups.length ? (
+                <ul className="nav-list">
+                  {groups.map((group) => (
+                    <li key={group.uniqueId}>
+                      <NavLink
+                        to={`groups/${group.uniqueId}`}
+                      >
+                        {group.name}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="nav-empty">
+                  <i> No groups</i>
+                </p>
+              )}
+            </>
+          ) : null}
           <div className="nav-section-title nav-section-title-friends">
-            <h2>Friends</h2>
+            <button
+              aria-expanded={friendsOpen}
+              className="nav-section-toggle"
+              onClick={() => setFriendsOpen((prev) => !prev)}
+              type="button"
+            >
+              <span className="nav-section-label">Friends</span>
+              <span className="nav-section-chevron">{friendsOpen ? "▾" : "▸"}</span>
+            </button>
           </div>
-          <div className="nav-cta">
-            <Form method="post" action="/friends/create">
-              <button type="submit" className="center nav-cta-button">New Friend</button>
-            </Form>
-          </div>
-          {friends.length ? (
-            <ul className="nav-list">
-              {friends.map((friend) => (
-                <li key={friend.uniqueId}>
-                    <NavLink
-                        className={({ isActive, isPending }) =>
-                        isActive
-                            ? "active"
-                            : isPending
-                            ? "pending"
-                            : ""
-                        }
-                        to={`friends/${friend.uniqueId}`}
-                    >
-                    {friend.name ? (
-                      <>
-                        {friend.name}
-                      </>
-                    ) : (
-                      <i>No Name</i>
-                    )}
-                    </NavLink>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="nav-empty">
-              <i>No friends</i>
-            </p>
-          )}
+          {friendsOpen ? (
+            <>
+              <div className="nav-cta">
+                <Form method="post" action="/friends/create">
+                  <button type="submit" className="center nav-cta-button">New Friend</button>
+                </Form>
+              </div>
+              {friends.length ? (
+                <ul className="nav-list">
+                  {friends.map((friend) => (
+                    <li key={friend.uniqueId}>
+                        <NavLink
+                            className={({ isActive, isPending }) =>
+                            isActive
+                                ? "active"
+                                : isPending
+                                ? "pending"
+                                : ""
+                            }
+                            to={`friends/${friend.uniqueId}`}
+                        >
+                        {friend.name ? (
+                          <>
+                            {friend.name}
+                          </>
+                        ) : (
+                          <i>No Name</i>
+                        )}
+                        </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="nav-empty">
+                  <i>No friends</i>
+                </p>
+              )}
+            </>
+          ) : null}
         </nav>
       </div>
       <div 
