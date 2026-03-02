@@ -10,12 +10,19 @@ export type Payment =
   name: string, 
   payer: Member, 
   cost: number, 
-  shareMember: Array<Member>
+  shareMember: Array<Member>;
+  shareDetails?: Array<PaymentShare>;
+  splitMode?: "equal" | "shares";
   createdAt?: string;
   youShouldPay?: number;
 };
 
 export type PaymentList = Map<number, Payment>;
+
+export type PaymentShare = {
+  member: Member;
+  shares: number;
+};
 
 export type MemberSettlement = {
   member: Member;
@@ -142,25 +149,43 @@ export async function updateGroup(uniqueId: string, updates: GroupMutation, memb
 }
 
 function calculateYouShouldPay(payment: Payment) {
-  const isSharedByYou = payment.shareMember.includes(kUser);
-  const isPayByYou = payment.payer === kUser;
+  const shareDetails = getPaymentShareDetails(payment);
+  const youShare = shareDetails.find((item) => item.member.uniqueId === kUser.uniqueId);
+  const isPayByYou = payment.payer.uniqueId === kUser.uniqueId;
+  const totalShares = shareDetails.reduce((sum, item) => sum + item.shares, 0);
 
-  if(!isSharedByYou && isPayByYou) {
+  if(!youShare && isPayByYou) {
     return -payment.cost
   }
 
-  if(!isSharedByYou) {
+  if(!youShare) {
     return 0;
   }
 
-  const shareMemberCount = payment.shareMember.length;
-  const shareCost = payment.cost / shareMemberCount;
+  if(totalShares <= 0) {
+    return 0;
+  }
+
+  const shareCost = payment.cost * (youShare.shares / totalShares);
 
   if(isPayByYou) {
     return - (payment.cost - shareCost);
   }
 
   return shareCost;
+}
+
+function getPaymentShareDetails(payment: Payment): PaymentShare[] {
+  if (payment.splitMode === "equal") {
+    return (payment.shareMember ?? []).map((member) => ({ member, shares: 1 }));
+  }
+
+  const weightedShares = (payment.shareDetails ?? []).filter((item) => item.shares > 0);
+  if (weightedShares.length) {
+    return weightedShares;
+  }
+
+  return (payment.shareMember ?? []).map((member) => ({ member, shares: 1 }));
 }
 
 function roundTo2(value: number) {
@@ -240,15 +265,20 @@ export function calculateGroupSettlement(group: GroupRecord | null | undefined):
       payerSettlement.paid = roundTo2(payerSettlement.paid + cost);
     }
 
-    const sharedMembers = payment.shareMember ?? [];
-    if (sharedMembers.length === 0) {
+    const shareDetails = getPaymentShareDetails(payment);
+    if (shareDetails.length === 0) {
       return;
     }
 
-    const shareAmount = cost / sharedMembers.length;
-    sharedMembers.forEach((member) => {
-      ensureMember(member);
-      const memberSettlement = settlementMap.get(member.uniqueId);
+    const totalShares = shareDetails.reduce((sum, item) => sum + item.shares, 0);
+    if (totalShares <= 0) {
+      return;
+    }
+
+    shareDetails.forEach((item) => {
+      ensureMember(item.member);
+      const memberSettlement = settlementMap.get(item.member.uniqueId);
+      const shareAmount = cost * (item.shares / totalShares);
       if (memberSettlement) {
         memberSettlement.share = roundTo2(memberSettlement.share + shareAmount);
       }

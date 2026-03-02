@@ -33,13 +33,17 @@ export default function Group({
     cost?: string;
     payer?: string;
     shareMember?: string;
+    shareUnits?: string;
   };
   const defaultPaymentDate = new Date().toISOString().slice(0, 10);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPayer, setSelectedPayer] = useState<SelectOption | null>(null);
   const [selectedShareMembers, setSelectedShareMembers] = useState<SelectOption[]>([]);
+  const [shareUnitsMap, setShareUnitsMap] = useState<Record<string, number>>({});
+  const [splitMode, setSplitMode] = useState<"equal" | "shares">("equal");
   const [paymentFormErrors, setPaymentFormErrors] = useState<PaymentFormErrors>({});
+  const [paymentCostValue, setPaymentCostValue] = useState<number>(0);
 
   const [paymentList, setPaymentList] = useState<PaymentList>();
   const paymentNametRef = useRef<HTMLInputElement>(null);
@@ -58,12 +62,18 @@ export default function Group({
     setModalOpen(false);
     setSelectedPayer(null);
     setSelectedShareMembers([]);
+    setShareUnitsMap({});
+    setSplitMode("equal");
+    setPaymentCostValue(0);
     setPaymentFormErrors({});
   };
 
   const openModal = () => {
     setSelectedPayer(null);
     setSelectedShareMembers([]);
+    setShareUnitsMap({});
+    setSplitMode("equal");
+    setPaymentCostValue(0);
     setPaymentFormErrors({});
     setModalOpen(true);
   };
@@ -77,7 +87,9 @@ export default function Group({
   const kUserId = "0";
   const getPaymentSummary = (payment: Payment) => {
     const isYouPayer = payment.payer.uniqueId === kUserId;
-    const isYouShared = payment.shareMember.some((member) => member.uniqueId === kUserId);
+    const isYouShared =
+      (payment.shareDetails ?? []).some((item) => item.member.uniqueId === kUserId) ||
+      payment.shareMember.some((member) => member.uniqueId === kUserId);
 
     if (!isYouPayer && !isYouShared) {
       return "not involved";
@@ -103,6 +115,22 @@ export default function Group({
     return "payment-summary-neutral";
   };
 
+  const getShareEstimate = (memberId: string) => {
+    const totalCost = Number(paymentCostValue ?? 0);
+    if (!Number.isFinite(totalCost) || totalCost <= 0) {
+      return 0;
+    }
+    const totalShares = selectedShareMembers.reduce(
+      (sum, member) => sum + Math.max(1, Number(shareUnitsMap[member.value] ?? 1)),
+      0
+    );
+    if (totalShares <= 0) {
+      return 0;
+    }
+    const memberShares = Math.max(1, Number(shareUnitsMap[memberId] ?? 1));
+    return (totalCost * memberShares) / totalShares;
+  };
+
   const validatePaymentForm = () => {
     const errors: PaymentFormErrors = {};
     const cost = Number(paymentCostRef.current?.value ?? "");
@@ -115,6 +143,15 @@ export default function Group({
     }
     if (selectedShareMembers.length === 0) {
       errors.shareMember = "Please select at least one shared member.";
+    }
+    if (
+      splitMode === "shares" &&
+      selectedShareMembers.some((member) => {
+        const units = Number(shareUnitsMap[member.value] ?? 0);
+        return !Number.isFinite(units) || units <= 0 || !Number.isInteger(units);
+      })
+    ) {
+      errors.shareUnits = "Each shared member must have integer shares greater than 0.";
     }
 
     setPaymentFormErrors(errors);
@@ -234,6 +271,7 @@ export default function Group({
                   name="cost"
                   placeholder="Cost"
                   type="text"
+                  onChange={(event) => setPaymentCostValue(Number(event.target.value))}
                   ref={paymentCostRef}
                 />
               </p>
@@ -266,22 +304,95 @@ export default function Group({
                 {paymentFormErrors.payer ? (
                   <p className="field-error">{paymentFormErrors.payer}</p>
                 ) : null}
+                <p>Split mode</p>
+                <select
+                  name="splitMode"
+                  onChange={(event) => setSplitMode(event.target.value === "shares" ? "shares" : "equal")}
+                  value={splitMode}
+                >
+                  <option value="equal">Equal</option>
+                  <option value="shares">By Shares</option>
+                </select>
                 <p>Shared by</p>
                 <Select
-                  name="shareMember"
                   options={options} 
                   classNamePrefix="rs"
                   value={selectedShareMembers}
                   onChange={(selectedOptions) => {
-                    setSelectedShareMembers((selectedOptions as SelectOption[]) ?? []);
+                    const nextSelected = (selectedOptions as SelectOption[]) ?? [];
+                    setSelectedShareMembers(nextSelected);
+                    setShareUnitsMap((prev) => {
+                      const nextMap: Record<string, number> = {};
+                      nextSelected.forEach((item) => {
+                        nextMap[item.value] = prev[item.value] ?? 1;
+                      });
+                      return nextMap;
+                    });
                     if (paymentFormErrors.shareMember) {
                       setPaymentFormErrors((prev) => ({ ...prev, shareMember: undefined }));
+                    }
+                    if (paymentFormErrors.shareUnits) {
+                      setPaymentFormErrors((prev) => ({ ...prev, shareUnits: undefined }));
                     }
                   }}
                   isMulti
                 />
                 {paymentFormErrors.shareMember ? (
                   <p className="field-error">{paymentFormErrors.shareMember}</p>
+                ) : null}
+                {splitMode === "shares" && selectedShareMembers.length ? (
+                  <div className="share-units-list">
+                    {selectedShareMembers.map((member) => (
+                      <p key={member.value}>
+                        <span>{member.label} shares</span>
+                        <div className="share-stepper">
+                          <button
+                            className="share-stepper-btn"
+                            onClick={() => {
+                              setShareUnitsMap((prev) => ({
+                                ...prev,
+                                [member.value]: Math.max(1, (prev[member.value] ?? 1) - 1),
+                              }));
+                            }}
+                            type="button"
+                          >
+                            -
+                          </button>
+                          <input
+                            className="share-stepper-value"
+                            name={`shareUnits:${member.value}`}
+                            readOnly
+                            type="number"
+                            value={shareUnitsMap[member.value] ?? 1}
+                          />
+                          <button
+                            className="share-stepper-btn"
+                            onClick={() => {
+                              setShareUnitsMap((prev) => ({
+                                ...prev,
+                                [member.value]: (prev[member.value] ?? 1) + 1,
+                              }));
+                              if (paymentFormErrors.shareUnits) {
+                                setPaymentFormErrors((prev) => ({ ...prev, shareUnits: undefined }));
+                              }
+                            }}
+                            type="button"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <span className="share-estimate">
+                          ${getShareEstimate(member.value).toFixed(2)}
+                        </span>
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+                {selectedShareMembers.map((member) => (
+                  <input key={member.value} name="shareMember" type="hidden" value={member.value} />
+                ))}
+                {paymentFormErrors.shareUnits ? (
+                  <p className="field-error">{paymentFormErrors.shareUnits}</p>
                 ) : null}
               </div>
             </Modal>,

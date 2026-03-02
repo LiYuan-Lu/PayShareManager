@@ -1,6 +1,6 @@
 import { redirect } from "react-router";
 import { addPayment, getMember } from "../data/group-data";
-import type { Payment, Member } from "../data/group-data";
+import type { Payment, Member, PaymentShare } from "../data/group-data";
 import type { Route } from "./+types/add-payment";
 
 export async function action({ params, request }: Route.ActionArgs) {
@@ -10,14 +10,27 @@ export async function action({ params, request }: Route.ActionArgs) {
   }
 
   const formData = await request.formData();
+  const splitModeRaw = formData.get("splitMode");
+  const splitMode = splitModeRaw === "shares" ? "shares" : "equal";
 
   const members: Member[] = [];
+  const shareDetails: PaymentShare[] = [];
   const shareMemberIds = formData.getAll("shareMember");
-  for (const member of shareMemberIds) {
-    if (typeof member === "string") {
-      const memberData = await getMember(params.uniqueId, member);
+  const uniqueShareMemberIds = Array.from(
+    new Set(shareMemberIds.filter((item): item is string => typeof item === "string"))
+  );
+  for (const memberId of uniqueShareMemberIds) {
+      const memberData = await getMember(params.uniqueId, memberId);
       members.push(memberData);
-    }
+    const shareUnitsRaw = formData.get(`shareUnits:${memberId}`);
+    const shareUnits = Number(shareUnitsRaw ?? 1);
+    shareDetails.push({
+      member: memberData,
+      shares:
+        splitMode === "shares" && Number.isFinite(shareUnits) && shareUnits > 0
+          ? Math.max(1, Math.round(shareUnits))
+          : 1,
+    });
   }
 
   const payerId = formData.get("payer") as string;
@@ -33,6 +46,8 @@ export async function action({ params, request }: Route.ActionArgs) {
     payer: payer,
     cost: Number(formData.get("cost")),
     shareMember: members,
+    shareDetails,
+    splitMode,
     createdAt,
   };
 
