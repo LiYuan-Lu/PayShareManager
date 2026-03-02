@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, type FormEvent, type JSX } from "react";
 import { calculateGroupSettlement, getGroup} from "../data/group-data";
 import type { Member } from "../data/group-data";
 import type { Payment, PaymentList } from "../data/group-data";
-import type { Route } from "./+types/contact";
+import type { Route } from "./+types/group";
 
 import Modal from "../components/modal";
 import { createPortal } from "react-dom";

@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 import { addPayment, getMember } from "../data/group-data";
 import type { Payment, Member } from "../data/group-data";
-import type { Route } from "./+types/contact";
+import type { Route } from "./+types/add-payment";
 
 export async function action({ params, request }: Route.ActionArgs) {
   if(!params.uniqueId)
