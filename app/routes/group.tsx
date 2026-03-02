@@ -74,6 +74,24 @@ export default function Group({
   const settlement = calculateGroupSettlement(group);
   const formatPaymentDate = (dateStr?: string) =>
     dateStr ? new Date(dateStr).toLocaleDateString() : "-";
+  const kUserId = "0";
+  const getPaymentSummary = (payment: Payment) => {
+    const isYouPayer = payment.payer.uniqueId === kUserId;
+    const isYouShared = payment.shareMember.some((member) => member.uniqueId === kUserId);
+
+    if (!isYouPayer && !isYouShared) {
+      return "not involved";
+    }
+
+    const youShouldPay = Number(payment.youShouldPay ?? 0);
+    if (youShouldPay > 0) {
+      return `you borrowed ${youShouldPay.toFixed(2)}`;
+    }
+    if (youShouldPay < 0) {
+      return `you lent ${Math.abs(youShouldPay).toFixed(2)}`;
+    }
+    return "not involved";
+  };
 
   const validatePaymentForm = () => {
     const errors: PaymentFormErrors = {};
@@ -149,11 +167,8 @@ export default function Group({
           </button>
           <div className="payment-container payment-intructions">
             <div>Date</div>
-            <div>Name</div>
-            <div>Cost</div>
-            <div>Payer</div>
-            <div>Shared by</div>
-            <div>You Shoud Pay</div>
+            <div>Payment</div>
+            <div>Summary</div>
             <div>Action</div>
           </div>
           <div id="payment-list">
@@ -163,15 +178,8 @@ export default function Group({
                 divElements.push(
                 <div className="payment-container" key={id}>
                   <div>{formatPaymentDate(payment.createdAt)}</div>
-                  <div>{payment.name}</div>
-                  <div>{payment.cost.toString()}</div>
-                  <div>{payment.payer.name}</div>
-                  <div>
-                    {payment.shareMember.map((member: Member, memberIndex: number)=>(<div key={memberIndex}>{member.name}</div>))}
-                  </div>
-                  <div>
-                    {payment.youShouldPay}
-                  </div>
+                  <div>{payment.payer.name} paid {payment.cost.toFixed(2)}</div>
+                  <div>{getPaymentSummary(payment)}</div>
                   <div>
                     <Form action={`/groups/${group.uniqueId}/edit-payment/${id}`}>
                       <button type="submit">Edit</button>
