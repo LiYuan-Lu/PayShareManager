@@ -1,7 +1,7 @@
 import { Form } from "react-router";
 import { useState, useRef, useEffect, type JSX } from "react";
 
-import { getGroup} from "../data/group-data";
+import { calculateGroupSettlement, getGroup} from "../data/group-data";
 import type { Member } from "../data/group-data";
 import type { Payment, PaymentList } from "../data/group-data";
 import type { Route } from "./+types/contact";
@@ -51,6 +51,7 @@ export default function Group({
   const options = group.members.map((member: Member) => {
     return {label: member.name, value: member.uniqueId};
   });
+  const settlement = calculateGroupSettlement(group);
 
   return (
     <div id="group">
@@ -186,6 +187,48 @@ export default function Group({
               </div>
             </Modal>,
             document.body
+          )}
+        </div>
+        <h2>Settlement Summary</h2>
+        <div className="payment-container payment-intructions">
+          <div>Member</div>
+          <div>Paid</div>
+          <div>Share</div>
+          <div>Net</div>
+        </div>
+        <div>
+          {settlement.memberSettlements.map((item) => (
+            <div className="payment-container" key={item.member.uniqueId}>
+              <div>{item.member.name}</div>
+              <div>{item.paid.toFixed(2)}</div>
+              <div>{item.share.toFixed(2)}</div>
+              <div
+                className={
+                  item.net > 0
+                    ? "settlement-net-positive"
+                    : item.net < 0
+                    ? "settlement-net-negative"
+                    : "settlement-net-zero"
+                }
+              >
+                {item.net.toFixed(2)}
+              </div>
+            </div>
+          ))}
+        </div>
+        <h2>Who Pays Whom</h2>
+        <div className="transfer-list">
+          {settlement.transfers.length ? (
+            settlement.transfers.map((transfer, index) => (
+              <div className="payment-container settlement-transfer-item" key={index}>
+                <div>{transfer.from.name}</div>
+                <div className="settlement-transfer-arrow">pays</div>
+                <div>{transfer.to.name}</div>
+                <div className="settlement-transfer-amount">{transfer.amount.toFixed(2)}</div>
+              </div>
+            ))
+          ) : (
+            <p className="settlement-empty">All settled.</p>
           )}
         </div>
       </div>

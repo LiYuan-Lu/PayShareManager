@@ -83,3 +83,43 @@
   max-height: 30vh; /* Adjust as needed; 60vh makes it take up to 60% of viewport height */
   overflow-y: auto; /* Enables vertical scrolling */
 }
+
+.settlement-net-positive {
+  color: #0a7f3f;
+  font-weight: 700;
+}
+
+.settlement-net-negative {
+  color: #c62828;
+  font-weight: 700;
+}
+
+.settlement-net-zero {
+  color: #666;
+  font-weight: 600;
+}
+
+.transfer-list {
+  margin-top: 0.75rem;
+}
+
+.settlement-transfer-item {
+  background-color: #f8fbff;
+  border-color: rgba(57, 146, 255, 0.25);
+}
+
+.settlement-transfer-arrow {
+  color: #666;
+  font-weight: 600;
+}
+
+.settlement-transfer-amount {
+  color: #0a7f3f;
+  font-weight: 700;
+}
+
+.settlement-empty {
+  margin: 0.5rem 0;
+  color: #666;
+  font-style: italic;
+}

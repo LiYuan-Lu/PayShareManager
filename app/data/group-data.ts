@@ -17,6 +17,24 @@ export type Payment =
 
 export type PaymentList = Map<number, Payment>;
 
+export type MemberSettlement = {
+  member: Member;
+  paid: number;
+  share: number;
+  net: number;
+};
+
+export type SettlementTransfer = {
+  from: Member;
+  to: Member;
+  amount: number;
+};
+
+export type GroupSettlement = {
+  memberSettlements: MemberSettlement[];
+  transfers: SettlementTransfer[];
+};
+
 export interface Member {
   uniqueId: string;
   name: string;
@@ -143,6 +161,117 @@ function calculateYouShouldPay(payment: Payment) {
   }
 
   return shareCost;
+}
+
+function roundTo2(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function buildTransfers(memberSettlements: MemberSettlement[]) {
+  const creditors = memberSettlements
+    .filter((item) => item.net > 0.005)
+    .map((item) => ({ member: item.member, amount: item.net }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const debtors = memberSettlements
+    .filter((item) => item.net < -0.005)
+    .map((item) => ({ member: item.member, amount: Math.abs(item.net) }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const transfers: SettlementTransfer[] = [];
+  let creditorIndex = 0;
+  let debtorIndex = 0;
+
+  while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
+    const creditor = creditors[creditorIndex];
+    const debtor = debtors[debtorIndex];
+    const transferAmount = roundTo2(Math.min(creditor.amount, debtor.amount));
+
+    if (transferAmount > 0) {
+      transfers.push({
+        from: debtor.member,
+        to: creditor.member,
+        amount: transferAmount,
+      });
+    }
+
+    creditor.amount = roundTo2(creditor.amount - transferAmount);
+    debtor.amount = roundTo2(debtor.amount - transferAmount);
+
+    if (creditor.amount <= 0.005) {
+      creditorIndex += 1;
+    }
+    if (debtor.amount <= 0.005) {
+      debtorIndex += 1;
+    }
+  }
+
+  return transfers;
+}
+
+export function calculateGroupSettlement(group: GroupRecord | null | undefined): GroupSettlement {
+  if (!group) {
+    return { memberSettlements: [], transfers: [] };
+  }
+
+  const memberMap = new Map<string, Member>();
+  const settlementMap = new Map<string, { member: Member; paid: number; share: number }>();
+
+  const ensureMember = (member: Member) => {
+    if (!memberMap.has(member.uniqueId)) {
+      memberMap.set(member.uniqueId, member);
+    }
+    if (!settlementMap.has(member.uniqueId)) {
+      settlementMap.set(member.uniqueId, { member, paid: 0, share: 0 });
+    }
+  };
+
+  (group.members ?? []).forEach((member) => ensureMember(member));
+
+  group.paymentList?.forEach((payment) => {
+    const cost = Number(payment.cost);
+    if (!Number.isFinite(cost) || cost < 0) {
+      return;
+    }
+
+    ensureMember(payment.payer);
+    const payerSettlement = settlementMap.get(payment.payer.uniqueId);
+    if (payerSettlement) {
+      payerSettlement.paid = roundTo2(payerSettlement.paid + cost);
+    }
+
+    const sharedMembers = payment.shareMember ?? [];
+    if (sharedMembers.length === 0) {
+      return;
+    }
+
+    const shareAmount = cost / sharedMembers.length;
+    sharedMembers.forEach((member) => {
+      ensureMember(member);
+      const memberSettlement = settlementMap.get(member.uniqueId);
+      if (memberSettlement) {
+        memberSettlement.share = roundTo2(memberSettlement.share + shareAmount);
+      }
+    });
+  });
+
+  const memberSettlements: MemberSettlement[] = Array.from(settlementMap.values())
+    .map((item) => {
+      const paid = roundTo2(item.paid);
+      const share = roundTo2(item.share);
+      return {
+        member: item.member,
+        paid,
+        share,
+        net: roundTo2(paid - share),
+      };
+    })
+    .sort((a, b) => a.member.name.localeCompare(b.member.name));
+
+  return {
+    memberSettlements,
+    transfers: buildTransfers(memberSettlements),
+  };
 }
 
 export async function addPayment(uniqueId: string, payment: Payment) {
