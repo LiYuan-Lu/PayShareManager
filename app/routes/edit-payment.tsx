@@ -1,6 +1,7 @@
 import { Form, redirect, useNavigate } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import Select from "react-select";
+import { useState, type FormEvent } from "react";
 
 import { getGroup, getMember, getPayment, updatePayment } from "../data/group-data";
 import type { Member, Payment } from "../data/group-data";
@@ -79,17 +80,51 @@ export default function EditPayment({
     label: member.name,
     value: member.uniqueId,
   }));
-  const selectedPayer =
+  const defaultPayer =
     memberOptions.find((option) => option.value === payment.payer.uniqueId) ?? null;
-  const selectedShareMembers = payment.shareMember
+  const defaultShareMembers = payment.shareMember
     .map((member) => memberOptions.find((option) => option.value === member.uniqueId))
     .filter((option): option is { label: string; value: string } => option !== undefined);
+  const [selectedPayer, setSelectedPayer] = useState<{ label: string; value: string } | null>(
+    defaultPayer
+  );
+  const [selectedShareMembers, setSelectedShareMembers] = useState<
+    { label: string; value: string }[]
+  >(defaultShareMembers);
+  const [formErrors, setFormErrors] = useState<{
+    cost?: string;
+    payer?: string;
+    shareMember?: string;
+  }>({});
   const paymentDate = payment.createdAt
     ? new Date(payment.createdAt).toISOString().slice(0, 10)
     : new Date().toISOString().slice(0, 10);
 
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const errors: { cost?: string; payer?: string; shareMember?: string } = {};
+    const form = event.currentTarget;
+    const costField = form.elements.namedItem("cost");
+    const costValue =
+      costField instanceof HTMLInputElement ? Number(costField.value) : Number.NaN;
+
+    if (!Number.isFinite(costValue) || costValue <= 0) {
+      errors.cost = "Cost must be greater than 0.";
+    }
+    if (!selectedPayer) {
+      errors.payer = "Please select who paid for this payment.";
+    }
+    if (selectedShareMembers.length === 0) {
+      errors.shareMember = "Please select at least one shared member.";
+    }
+
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      event.preventDefault();
+    }
+  };
+
   return (
-    <Form method="post" className="group-form">
+    <Form method="post" className="group-form" onSubmit={handleSubmit}>
       <h2>Edit Payment</h2>
       <p>
         <span>Name</span>
@@ -115,6 +150,9 @@ export default function EditPayment({
           required
         />
       </p>
+      {formErrors.cost ? (
+        <p className="field-error">{formErrors.cost}</p>
+      ) : null}
       <p>
         <span>Date</span>
         <input
@@ -130,18 +168,36 @@ export default function EditPayment({
         <Select
           name="payer"
           options={memberOptions}
-          defaultValue={selectedPayer}
+          value={selectedPayer}
+          onChange={(option) => {
+            setSelectedPayer(option as { label: string; value: string } | null);
+            if (formErrors.payer) {
+              setFormErrors((prev) => ({ ...prev, payer: undefined }));
+            }
+          }}
         />
       </p>
+      {formErrors.payer ? (
+        <p className="field-error">{formErrors.payer}</p>
+      ) : null}
       <p>
         <span>Shared By</span>
         <Select
           name="shareMember"
           options={memberOptions}
-          defaultValue={selectedShareMembers}
+          value={selectedShareMembers}
+          onChange={(selectedOptions) => {
+            setSelectedShareMembers((selectedOptions as { label: string; value: string }[]) ?? []);
+            if (formErrors.shareMember) {
+              setFormErrors((prev) => ({ ...prev, shareMember: undefined }));
+            }
+          }}
           isMulti
         />
       </p>
+      {formErrors.shareMember ? (
+        <p className="field-error">{formErrors.shareMember}</p>
+      ) : null}
       <p>
         <button type="submit">Save</button>
         <button onClick={() => navigate(-1)} type="button">

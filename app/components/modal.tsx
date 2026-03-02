@@ -1,9 +1,9 @@
-import React, { type MouseEvent } from 'react';
+import React, { type FormEvent, type MouseEvent } from 'react';
 import { Form } from "react-router";
 import './modal.css';
 
 interface ModalProps extends React.PropsWithChildren{
-  onSubmit: (msg: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancel: (msg: string) => void;
   closeModal: (msg: string) => void;
   postTarget: string;
@@ -26,7 +26,7 @@ const Modal: React.FC<ModalProps> = ({ onSubmit, onCancel, closeModal, postTarge
         >
           <p className="close">&times;</p>
         </div>
-        <Form method="post" action={postTarget}>
+        <Form method="post" action={postTarget} onSubmit={onSubmit}>
         <div className="modal-content">{children}</div>
         <div className="modal-footer">
           <button

@@ -1,5 +1,5 @@
 import { Form } from "react-router";
-import { useState, useRef, useEffect, type JSX } from "react";
+import { useState, useRef, useEffect, type FormEvent, type JSX } from "react";
 
 import { calculateGroupSettlement, getGroup} from "../data/group-data";
 import type { Member } from "../data/group-data";
@@ -28,9 +28,18 @@ export default function Group({
   loaderData,
 }: { loaderData: { group: any } }) {
   const { group } = loaderData;
+  type SelectOption = { label: string; value: string };
+  type PaymentFormErrors = {
+    cost?: string;
+    payer?: string;
+    shareMember?: string;
+  };
   const defaultPaymentDate = new Date().toISOString().slice(0, 10);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPayer, setSelectedPayer] = useState<SelectOption | null>(null);
+  const [selectedShareMembers, setSelectedShareMembers] = useState<SelectOption[]>([]);
+  const [paymentFormErrors, setPaymentFormErrors] = useState<PaymentFormErrors>({});
 
   const [paymentList, setPaymentList] = useState<PaymentList>();
   const paymentNametRef = useRef<HTMLInputElement>(null);
@@ -45,16 +54,50 @@ export default function Group({
   }, [group.paymentList])
 
 
-  const handleButtonClick = (msg: String) => setModalOpen(false);
+  const handleButtonClick = (msg: String) => {
+    setModalOpen(false);
+    setSelectedPayer(null);
+    setSelectedShareMembers([]);
+    setPaymentFormErrors({});
+  };
 
-  const openModal = () => setModalOpen(true);
+  const openModal = () => {
+    setSelectedPayer(null);
+    setSelectedShareMembers([]);
+    setPaymentFormErrors({});
+    setModalOpen(true);
+  };
 
-  const options = group.members.map((member: Member) => {
+  const options: SelectOption[] = group.members.map((member: Member) => {
     return {label: member.name, value: member.uniqueId};
   });
   const settlement = calculateGroupSettlement(group);
   const formatPaymentDate = (dateStr?: string) =>
     dateStr ? new Date(dateStr).toLocaleDateString() : "-";
+
+  const validatePaymentForm = () => {
+    const errors: PaymentFormErrors = {};
+    const cost = Number(paymentCostRef.current?.value ?? "");
+
+    if (!Number.isFinite(cost) || cost <= 0) {
+      errors.cost = "Cost must be greater than 0.";
+    }
+    if (!selectedPayer) {
+      errors.payer = "Please select who paid for this payment.";
+    }
+    if (selectedShareMembers.length === 0) {
+      errors.shareMember = "Please select at least one shared member.";
+    }
+
+    setPaymentFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleAddPaymentSubmit = (event: FormEvent<HTMLFormElement>) => {
+    if (!validatePaymentForm()) {
+      event.preventDefault();
+    }
+  };
 
   return (
     <div id="group">
@@ -149,7 +192,7 @@ export default function Group({
           createPortal(
             <Modal
               closeModal={handleButtonClick}
-              onSubmit={handleButtonClick}
+              onSubmit={handleAddPaymentSubmit}
               onCancel={handleButtonClick}
               postTarget={`/groups/${group.uniqueId}/add-payment`}
             >
@@ -177,6 +220,9 @@ export default function Group({
                   ref={paymentCostRef}
                 />
               </p>
+              {paymentFormErrors.cost ? (
+                <p className="field-error">{paymentFormErrors.cost}</p>
+              ) : null}
               <p>
                 <span>Date</span>
                 <input
@@ -190,14 +236,34 @@ export default function Group({
                 <p>Paid by</p>
                 <Select 
                   name="payer"
-                  options={options} 
+                  options={options}
+                  value={selectedPayer}
+                  onChange={(option) => {
+                    setSelectedPayer(option as SelectOption | null);
+                    if (paymentFormErrors.payer) {
+                      setPaymentFormErrors((prev) => ({ ...prev, payer: undefined }));
+                    }
+                  }}
                 />
+                {paymentFormErrors.payer ? (
+                  <p className="field-error">{paymentFormErrors.payer}</p>
+                ) : null}
                 <p>Shared by</p>
                 <Select
                   name="shareMember"
                   options={options} 
+                  value={selectedShareMembers}
+                  onChange={(selectedOptions) => {
+                    setSelectedShareMembers((selectedOptions as SelectOption[]) ?? []);
+                    if (paymentFormErrors.shareMember) {
+                      setPaymentFormErrors((prev) => ({ ...prev, shareMember: undefined }));
+                    }
+                  }}
                   isMulti
                 />
+                {paymentFormErrors.shareMember ? (
+                  <p className="field-error">{paymentFormErrors.shareMember}</p>
+                ) : null}
               </div>
             </Modal>,
             document.body

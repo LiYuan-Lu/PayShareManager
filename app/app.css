@@ -294,3 +294,9 @@ i {
 p span {
   margin-right: 0.5rem;
 }
+
+.field-error {
+  color: #c62828;
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0.5rem;
+}
