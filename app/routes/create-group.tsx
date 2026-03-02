@@ -124,6 +124,7 @@ export default function CreateGroup({
               <div>
                 <Select 
                   options={loaderData.friends.map((friend: any) => ({value: friend.uniqueId, label: friend.name}))} 
+                  classNamePrefix="rs"
                   onChange={handleFriendChange}
                 />
               </div>

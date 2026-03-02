@@ -237,6 +237,7 @@ export default function Group({
                 <Select 
                   name="payer"
                   options={options}
+                  classNamePrefix="rs"
                   value={selectedPayer}
                   onChange={(option) => {
                     setSelectedPayer(option as SelectOption | null);
@@ -252,6 +253,7 @@ export default function Group({
                 <Select
                   name="shareMember"
                   options={options} 
+                  classNamePrefix="rs"
                   value={selectedShareMembers}
                   onChange={(selectedOptions) => {
                     setSelectedShareMembers((selectedOptions as SelectOption[]) ?? []);

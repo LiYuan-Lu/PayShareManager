@@ -3,11 +3,12 @@
     flex-direction: row;
     justify-content: space-between;
     gap: 0.5rem;
-    border: 1px solid rgba(0, 0, 0, 0.1);  /* Light border */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15); /* Subtle shadow */
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
     padding: 0.5rem;                       /* Optional padding */
-    border-radius: 4px;  
+    border-radius: 10px;
     align-items: center; /* Vertically center children */     
+    background-color: var(--surface);
 }
 
 .payment-container > * {
@@ -37,10 +38,10 @@
   cursor: pointer;
   display: inline-block;
   padding: 0.5rem 1rem;
-  background-color: #ff4d4f; /* Red background indicates delete */
+  background-color: var(--danger);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 999px;
   text-align: center;
   transition: background-color 0.3s ease;
   font-weight: 500;
@@ -48,25 +49,25 @@
 }
 
 .delete-button:hover {
-  background-color: #ff7875;
+  background-color: color-mix(in srgb, var(--danger) 85%, white);
 }
 
 .add-button {
   cursor: pointer;
   display: inline-block;
   padding: 0.5rem 1rem;
-  background-color: #3992ff; /* Blue background */
+  background-color: var(--primary); /* Blue background */
   color: white;
   text-align: center;
   border: none;
-  border-radius: 4px;
+  border-radius: 999px;
   font-weight: 500;
   transition: background-color 0.3s ease;
   margin-top: 0.5rem;
 }
 
 .add-button:hover {
-  background-color: #66a8ff; /* Lighter blue on hover */
+  background-color: var(--primary-strong); /* Lighter blue on hover */
 }
 
 .bottom-space {
@@ -75,7 +76,7 @@
 
 .payment-intructions {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--text-muted);
   margin-top: 0.5rem;
 }
 
@@ -95,7 +96,7 @@
 }
 
 .settlement-net-zero {
-  color: #666;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -104,12 +105,12 @@
 }
 
 .settlement-transfer-item {
-  background-color: #f8fbff;
-  border-color: rgba(57, 146, 255, 0.25);
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
 }
 
 .settlement-transfer-arrow {
-  color: #666;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -120,6 +121,6 @@
 
 .settlement-empty {
   margin: 0.5rem 0;
-  color: #666;
+  color: var(--text-muted);
   font-style: italic;
 }

@@ -168,6 +168,7 @@ export default function EditPayment({
         <Select
           name="payer"
           options={memberOptions}
+          classNamePrefix="rs"
           value={selectedPayer}
           onChange={(option) => {
             setSelectedPayer(option as { label: string; value: string } | null);
@@ -185,6 +186,7 @@ export default function EditPayment({
         <Select
           name="shareMember"
           options={memberOptions}
+          classNamePrefix="rs"
           value={selectedShareMembers}
           onChange={(selectedOptions) => {
             setSelectedShareMembers((selectedOptions as { label: string; value: string }[]) ?? []);

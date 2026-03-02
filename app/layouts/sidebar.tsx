@@ -4,13 +4,12 @@ import {
   NavLink,
   Outlet,
   useNavigation,
-  useSubmit,
 } from "react-router";
 
 import { getFriends } from "../data/friend-data";
 import { getGroups } from "../data/group-data";
 import type { Route } from "./+types/sidebar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export async function loader({
   request,
@@ -27,7 +26,7 @@ export default function SidebarLayout({
 }: Route.ComponentProps) {
     const { friends, q, groups } = loaderData;
     const navigation = useNavigation();
-    const submit = useSubmit();
+    const [theme, setTheme] = useState<"light" | "dark">("light");
     const searching =
     navigation.location &&
     new URLSearchParams(navigation.location.search).has(
@@ -41,24 +40,59 @@ export default function SidebarLayout({
         }
     }, [q]);
 
+    useEffect(() => {
+      const stored = window.localStorage.getItem("theme");
+      const resolvedTheme =
+        stored === "dark" || stored === "light"
+          ? stored
+          : window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      setTheme(resolvedTheme);
+      document.documentElement.setAttribute("data-theme", resolvedTheme);
+    }, []);
+
+    const toggleTheme = () => {
+      const nextTheme = theme === "dark" ? "light" : "dark";
+      setTheme(nextTheme);
+      document.documentElement.setAttribute("data-theme", nextTheme);
+      window.localStorage.setItem("theme", nextTheme);
+    };
+
   return (
     <>
       <div id="sidebar">
-        <h1>
-          <Link to="about">Pay Share Manager</Link>
-        </h1>
+        <div className="sidebar-brand">
+          <h1 className="brand-title">
+            <Link to="about">Pay Share Manager</Link>
+          </h1>
+          <button
+            aria-label="Toggle dark mode"
+            aria-pressed={theme === "dark"}
+            className="theme-toggle"
+            onClick={toggleTheme}
+            type="button"
+          >
+            <span className="theme-toggle-track">
+              <span className="theme-toggle-thumb" />
+            </span>
+            <span className="theme-toggle-label">
+              {theme === "dark" ? "Dark" : "Light"}
+            </span>
+          </button>
+        </div>
         <nav>
-          <div>
-            <h1>Groups</h1>
+          <div className="nav-section-title nav-section-title-groups">
+            <h2>Groups</h2>
           </div>
-          <div>
+          <div className="nav-cta">
             <Form method="post" action="/create-group">
-            <button type="submit" className="center">New Group</button>
+            <button type="submit" className="center nav-cta-button">New Group</button>
             </Form>
           </div>
           {
           groups.length ? (
-            <ul>
+            <ul className="nav-list">
               {groups.map((group) => (
                 <li key={group.uniqueId}>
                   <NavLink
@@ -70,20 +104,20 @@ export default function SidebarLayout({
               ))}
             </ul>
           ) : (
-            <p>
+            <p className="nav-empty">
               <i> No groups</i>
             </p>
           )}
-          <div>
-            <h1>Friends</h1>
+          <div className="nav-section-title nav-section-title-friends">
+            <h2>Friends</h2>
           </div>
-          <div>
+          <div className="nav-cta">
             <Form method="post" action="/friends/create">
-              <button type="submit" className="center">New Friend</button>
+              <button type="submit" className="center nav-cta-button">New Friend</button>
             </Form>
           </div>
           {friends.length ? (
-            <ul>
+            <ul className="nav-list">
               {friends.map((friend) => (
                 <li key={friend.uniqueId}>
                     <NavLink
@@ -108,7 +142,7 @@ export default function SidebarLayout({
               ))}
             </ul>
           ) : (
-            <p>
+            <p className="nav-empty">
               <i>No friends</i>
             </p>
           )}

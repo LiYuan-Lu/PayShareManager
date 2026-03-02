@@ -26,12 +26,25 @@ export function HydrateFallback() {
 // It acts as your document's "app shell" for all route components, HydrateFallback, and ErrorBoundary
 // For more information, see https://reactrouter.com/explanation/special-files#layout-export
 export function Layout({ children }: { children: React.ReactNode }) {
+  const themeInitScript = `
+    (() => {
+      try {
+        const stored = localStorage.getItem("theme");
+        const theme = stored === "dark" || stored === "light"
+          ? stored
+          : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch {}
+    })();
+  `;
+
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="stylesheet" href={appStylesHref} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
         {children}

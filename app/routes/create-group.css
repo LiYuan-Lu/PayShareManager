@@ -1,5 +1,5 @@
 #group-member {
-  border-top: 2px solid #ccc; /* A light-gray line */
+  border-top: 2px solid var(--border);
   margin-top: 1rem;          /* Space above the line */
   padding-top: 1rem;         /* Space below the line */
 }
@@ -10,11 +10,12 @@
   justify-content: space-between;
   gap: 0.5rem; /* optional spacing between items */
 
-  border: 1px solid rgba(0, 0, 0, 0.1); /* Light border */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
   padding: 8px;  /* Padding inside the container */
-  border-radius: 4px; /* Optional rounded corners */
+  border-radius: 10px; /* Optional rounded corners */
   margin-bottom: 0.5rem; /* Space between items */
+  background-color: var(--surface);
 }
 
 .group-member-add {
@@ -30,10 +31,10 @@
   cursor: pointer;
   display: inline-block;
   padding: 0.5rem 1rem;
-  background-color: #ff4d4f; /* Red background indicates delete */
+  background-color: var(--danger);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 999px;
   text-align: center;
   transition: background-color 0.3s ease;
   font-weight: 500;
@@ -41,25 +42,25 @@
 }
 
 .delete-group-member-button:hover {
-  background-color: #ff7875;
+  background-color: color-mix(in srgb, var(--danger) 85%, white);
 }
 
 .add-group-member-button {
   cursor: pointer;
   display: inline-block;
   padding: 0.5rem 1rem;
-  background-color: #3992ff; /* Blue background */
+  background-color: var(--primary);
   color: white;
   text-align: center;
   border: none;
-  border-radius: 4px;
+  border-radius: 999px;
   font-weight: 500;
   transition: background-color 0.3s ease;
   margin-top: 0.5rem;
 }
 
 .add-group-member-button:hover {
-  background-color: #66a8ff; /* Lighter blue on hover */
+  background-color: var(--primary-strong);
 }
 
 .group-form p button:first-of-type {
@@ -71,11 +72,11 @@
   margin-bottom: 1rem;  /* Adjust as needed for spacing */
 }
 
-h2 {
+.group-form h2 {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #3992ff;             /* Blue color for the heading */
-  border-bottom: 2px solid #ccc; /* Bottom border for separation */
+  color: var(--primary);
+  border-bottom: 2px solid var(--border);
   margin: 1rem 0;             /* Top and bottom margin */
   padding-bottom: 0.5rem;     /* Padding below text and border */
 }
