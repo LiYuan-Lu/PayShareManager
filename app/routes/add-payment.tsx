@@ -11,13 +11,14 @@ export async function action({ params, request }: Route.ActionArgs) {
 
   const formData = await request.formData();
 
-  let members = Array<Member>();
-  formData.getAll("shareMember").forEach(async (member) => {
+  const members: Member[] = [];
+  const shareMemberIds = formData.getAll("shareMember");
+  for (const member of shareMemberIds) {
     if (typeof member === "string") {
-      const memberData = await getMember(params.uniqueId?? "", member);
-      memberData? members.push(memberData): null;
+      const memberData = await getMember(params.uniqueId, member);
+      members.push(memberData);
     }
-  });
+  }
 
   const payerId = formData.get("payer") as string;
   const payer = await getMember(params.uniqueId, payerId);

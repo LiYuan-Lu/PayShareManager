@@ -46,6 +46,10 @@ export default [
         "routes/delete-payment.tsx"
     ),
     route(
+        "groups/:uniqueId/edit-payment/:paymentId",
+        "routes/edit-payment.tsx"
+    ),
+    route(
         "friends/:uniqueId", 
         "routes/friend.tsx"
     ),

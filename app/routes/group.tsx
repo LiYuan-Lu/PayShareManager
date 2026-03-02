@@ -126,6 +126,9 @@ export default function Group({
                     {payment.youShouldPay}
                   </div>
                   <div>
+                    <Form action={`/groups/${group.uniqueId}/edit-payment/${id}`}>
+                      <button type="submit">Edit</button>
+                    </Form>
                     <Form action={`/groups/${group.uniqueId}/delete-payment/${id}`} method="post">
                       <button type="submit" className="delete-button">Delete</button>
                     </Form>

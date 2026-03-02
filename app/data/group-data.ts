@@ -173,6 +173,34 @@ export async function deletePayment(uniqueId: string, paymentId: number) {
   group.paymentList.delete(paymentId);
 }
 
+export async function getPayment(uniqueId: string, paymentId: number) {
+  const group = await fakeGroups.get(uniqueId);
+  if (!group) {
+    throw new Error(`No group found for ${uniqueId}`);
+  }
+  if (!group.paymentList) {
+    throw new Error(`No payment list found for ${uniqueId}`);
+  }
+  const payment = group.paymentList.get(paymentId);
+  if (!payment) {
+    throw new Error(`No payment found for ${paymentId}`);
+  }
+  return payment;
+}
+
+export async function updatePayment(uniqueId: string, paymentId: number, payment: Payment) {
+  const group = await fakeGroups.get(uniqueId);
+  if (!group) {
+    throw new Error(`No group found for ${uniqueId}`);
+  }
+  if (!group.paymentList) {
+    throw new Error(`No payment list found for ${uniqueId}`);
+  }
+
+  payment.youShouldPay = calculateYouShouldPay(payment);
+  group.paymentList.set(paymentId, payment);
+}
+
 export async function deleteGroup(uniqueId: string) {
   fakeGroups.destroy(uniqueId);
 }
