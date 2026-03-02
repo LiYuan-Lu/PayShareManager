@@ -137,13 +137,11 @@ export default function Group({
         </div>
 
 
-        <h2>Members</h2>
-        {
-          Array.isArray(group.members) ? group.members.map((member: Member, index: number) => (
-            <div className="group-member-container" key={index}>
-              <div className="group-member-item group-new-member">{member.name}</div>
-            </div>
-        )) : null}
+        <Form action={`/groups/${group.uniqueId}/members`}>
+          <button className="add-button member-button" type="submit">
+            👥 Member : {Array.isArray(group.members) ? group.members.length : 0} people
+          </button>
+        </Form>
         <h2>Payment list</h2>
         <div>
           <button className="add-button bottom-space" onClick={openModal}>
@@ -313,9 +311,6 @@ export default function Group({
             <p className="settlement-empty">All settled.</p>
           )}
         </div>
-      </div>
-      <div id="payment-list">
-
       </div>
     </div>
   );

@@ -22,6 +22,10 @@ export default [
         "routes/edit-group.tsx"
     ),
     route(
+        "groups/:uniqueId/members",
+        "routes/group-members.tsx"
+    ),
+    route(
         "groups/:uniqueId/destroy", 
         "routes/destroy-group.tsx"
     ),

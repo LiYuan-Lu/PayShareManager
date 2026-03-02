@@ -70,6 +70,15 @@
   background-color: var(--primary-strong); /* Lighter blue on hover */
 }
 
+.member-button {
+  background: linear-gradient(180deg, #149789, #0f766e);
+  border-color: #0f766e;
+}
+
+.member-button:hover {
+  background: linear-gradient(180deg, #11867a, #0d5f59);
+}
+
 .bottom-space {
   margin-bottom: 1rem;
 }
