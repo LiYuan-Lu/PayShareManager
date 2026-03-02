@@ -28,6 +28,7 @@ export default function Group({
   loaderData,
 }: { loaderData: { group: any } }) {
   const { group } = loaderData;
+  const defaultPaymentDate = new Date().toISOString().slice(0, 10);
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -52,6 +53,8 @@ export default function Group({
     return {label: member.name, value: member.uniqueId};
   });
   const settlement = calculateGroupSettlement(group);
+  const formatPaymentDate = (dateStr?: string) =>
+    dateStr ? new Date(dateStr).toLocaleDateString() : "-";
 
   return (
     <div id="group">
@@ -104,6 +107,7 @@ export default function Group({
             Add Payment
           </button>
           <div className="payment-container payment-intructions">
+            <div>Date</div>
             <div>Name</div>
             <div>Cost</div>
             <div>Payer</div>
@@ -117,6 +121,7 @@ export default function Group({
               paymentList && paymentList.forEach((payment: Payment, id: number) => (
                 divElements.push(
                 <div className="payment-container" key={id}>
+                  <div>{formatPaymentDate(payment.createdAt)}</div>
                   <div>{payment.name}</div>
                   <div>{payment.cost.toString()}</div>
                   <div>{payment.payer.name}</div>
@@ -170,6 +175,15 @@ export default function Group({
                   placeholder="Cost"
                   type="text"
                   ref={paymentCostRef}
+                />
+              </p>
+              <p>
+                <span>Date</span>
+                <input
+                  aria-label="Date"
+                  defaultValue={defaultPaymentDate}
+                  name="createdAt"
+                  type="date"
                 />
               </p>
               <div>

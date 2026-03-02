@@ -338,7 +338,7 @@ export async function updatePayment(uniqueId: string, paymentId: number, payment
   const updatedPayment: Payment = {
     ...existingPayment,
     ...payment,
-    createdAt: existingPayment.createdAt ?? payment.createdAt ?? new Date().toISOString(),
+    createdAt: payment.createdAt ?? existingPayment.createdAt ?? new Date().toISOString(),
   };
   updatedPayment.youShouldPay = calculateYouShouldPay(updatedPayment);
   group.paymentList.set(paymentId, updatedPayment);

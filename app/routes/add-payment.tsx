@@ -22,12 +22,18 @@ export async function action({ params, request }: Route.ActionArgs) {
 
   const payerId = formData.get("payer") as string;
   const payer = await getMember(params.uniqueId, payerId);
+  const createdAtRaw = formData.get("createdAt");
+  const createdAt =
+    typeof createdAtRaw === "string" && createdAtRaw
+      ? new Date(`${createdAtRaw}T00:00:00`).toISOString()
+      : new Date().toISOString();
+
   const payment: Payment = {
     name: formData.get("name") as string,
     payer: payer,
     cost: Number(formData.get("cost")),
     shareMember: members,
-    createdAt : new Date().toISOString(),
+    createdAt,
   };
 
 

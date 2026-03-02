@@ -45,12 +45,18 @@ export async function action({ params, request }: ActionFunctionArgs) {
   }
 
   const payer = await getMember(params.uniqueId, payerId);
+  const createdAtRaw = formData.get("createdAt");
+  const createdAt =
+    typeof createdAtRaw === "string" && createdAtRaw
+      ? new Date(`${createdAtRaw}T00:00:00`).toISOString()
+      : undefined;
+
   const payment: Payment = {
     name: formData.get("name")?.toString() ?? "",
     payer,
     cost: Number(formData.get("cost")),
     shareMember: members,
-    createdAt: new Date().toISOString(),
+    createdAt,
   };
 
   await updatePayment(params.uniqueId, paymentId, payment);
@@ -78,6 +84,9 @@ export default function EditPayment({
   const selectedShareMembers = payment.shareMember
     .map((member) => memberOptions.find((option) => option.value === member.uniqueId))
     .filter((option): option is { label: string; value: string } => option !== undefined);
+  const paymentDate = payment.createdAt
+    ? new Date(payment.createdAt).toISOString().slice(0, 10)
+    : new Date().toISOString().slice(0, 10);
 
   return (
     <Form method="post" className="group-form">
@@ -103,6 +112,16 @@ export default function EditPayment({
           placeholder="Cost"
           step="0.01"
           type="number"
+          required
+        />
+      </p>
+      <p>
+        <span>Date</span>
+        <input
+          aria-label="Date"
+          defaultValue={paymentDate}
+          name="createdAt"
+          type="date"
           required
         />
       </p>
