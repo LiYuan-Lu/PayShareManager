@@ -530,13 +530,25 @@ p span {
 
 /* react-select theme */
 .rs__control {
-  border-color: var(--border) !important;
-  background-color: var(--surface) !important;
+  border: none !important;
+  background-color: transparent !important;
   box-shadow: none !important;
+  min-height: 2.6rem !important;
+  cursor: pointer !important;
+  border-radius: 12px !important;
+  transition: box-shadow 150ms ease, background-color 150ms ease !important;
 }
 
 .rs__control:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border)) !important;
+  border: none !important;
+  background-color: color-mix(in srgb, var(--primary) 7%, transparent) !important;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 22%, transparent) !important;
+}
+
+.rs__control--menu-is-open,
+.rs__control--is-focused {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--primary) 28%, transparent) !important;
 }
 
 .rs__single-value,
@@ -552,22 +564,82 @@ p span {
   color: var(--text-muted) !important;
 }
 
+.rs__value-container {
+  padding: 0.25rem 0.1rem !important;
+}
+
+.rs__input-container {
+  caret-color: transparent !important;
+}
+
+.rs__input-container input {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  caret-color: transparent !important;
+}
+
+.rs__indicator-separator {
+  display: none !important;
+}
+
+.rs__dropdown-indicator {
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface)) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 36%, var(--border)) !important;
+  border-radius: 999px !important;
+  margin-left: 0.35rem !important;
+  padding: 0.2rem 0.45rem !important;
+  color: var(--primary) !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--primary) 18%, transparent) !important;
+  transition: box-shadow 140ms ease, background-color 140ms ease, border-color 140ms ease !important;
+}
+
+.rs__control:hover .rs__dropdown-indicator {
+  background: color-mix(in srgb, var(--primary) 22%, var(--surface)) !important;
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border)) !important;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 34%, transparent) !important;
+}
+
+.rs__dropdown-indicator svg {
+  width: 18px;
+  height: 18px;
+}
+
 .rs__menu {
   background-color: var(--surface) !important;
   border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--text) 16%, transparent) !important;
+}
+
+.rs__menu-list {
+  padding: 0.4rem !important;
 }
 
 .rs__option {
   background-color: var(--surface) !important;
+  border-radius: 10px !important;
+  margin-bottom: 0.2rem !important;
+  padding: 0.5rem 0.65rem !important;
+  border: 1px solid transparent !important;
+  transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease !important;
 }
 
 .rs__option--is-focused {
   background-color: color-mix(in srgb, var(--primary) 16%, var(--surface)) !important;
+  border-color: color-mix(in srgb, var(--primary) 36%, var(--border)) !important;
+  transform: translateX(1px) !important;
 }
 
 .rs__option--is-selected {
   background-color: var(--primary) !important;
   color: #fff !important;
+  border-color: color-mix(in srgb, var(--primary-strong) 70%, var(--border)) !important;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 35%, transparent) !important;
 }
 
 .rs__multi-value {
