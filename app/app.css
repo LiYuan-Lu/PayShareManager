@@ -184,13 +184,19 @@ form[action$="destroy"] button {
 }
 
 .brand-title::before {
-  content: "";
+  content: "PS";
   display: inline-block;
   width: 1.8rem;
   height: 1.8rem;
-  background-image: url("/favicon.ico");
-  background-size: contain;
-  background-repeat: no-repeat;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #38bdf8, #2563eb);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.8rem;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
   margin-right: 0.75rem;
 }
 
