@@ -1,6 +1,7 @@
 import { Form, redirect, useActionData, useNavigate } from "react-router";
 import { useEffect, useMemo, useState } from "react";
 import Select from "react-select";
+import type { MultiValue } from "react-select";
 import type { Route } from "./+types/edit-group";
 
 import {
@@ -124,7 +125,6 @@ export default function EditGroup({
   const [members, setMembers] = useState<SelectOption[]>(
     (group.members ?? []).map(toOption)
   );
-  const [selectedFriend, setSelectedFriend] = useState<SelectOption | null>(null);
   const [memberError, setMemberError] = useState<string | null>(
     actionData?.memberError ?? null
   );
@@ -132,42 +132,43 @@ export default function EditGroup({
   useEffect(() => {
     setMemberError(actionData?.memberError ?? null);
   }, [actionData?.memberError]);
-  const friendOptions = friends
-    .map((friend) => ({ value: friend.uniqueId ?? "", label: friend.name }))
-    .filter(
-      (option) =>
-        option.value &&
-        !members.some((member) => member.value === option.value)
+
+  const memberOptions = useMemo(() => {
+    const optionsById = new Map<string, SelectOption>();
+    (group.members ?? []).map(toOption).forEach((option) => {
+      optionsById.set(option.value, option);
+    });
+    friends
+      .map((friend) => ({ value: friend.uniqueId ?? "", label: friend.name }))
+      .filter((option) => option.value && option.label)
+      .forEach((option) => {
+        optionsById.set(option.value, option);
+      });
+    return Array.from(optionsById.values());
+  }, [friends, group.members]);
+
+  const handleMembersChange = (nextValue: MultiValue<SelectOption>) => {
+    const nextMembers = Array.from(nextValue);
+    const removedMembers = members.filter(
+      (member) => !nextMembers.some((nextMember) => nextMember.value === member.value)
     );
-
-  const handleAddMember = () => {
-    if (!selectedFriend) {
-      return;
-    }
-
-    if (members.some((member) => member.value === selectedFriend.value)) {
-      return;
-    }
-
-    setMembers((prev) => [...prev, selectedFriend]);
-    setSelectedFriend(null);
-    setMemberError(null);
-  };
-
-  const handleDeleteMember = (memberToDelete: SelectOption) => {
-    if (memberToDelete.value === "0") {
+    const removedSelf = removedMembers.find((member) => member.value === "0");
+    if (removedSelf) {
       setMemberError("You cannot remove yourself from a group.");
       return;
     }
 
-    if (blockedMemberIdSet.has(memberToDelete.value)) {
-      const message = `${memberToDelete.label} already participated in payments and cannot be removed.`;
+    const removedBlockedMember = removedMembers.find((member) =>
+      blockedMemberIdSet.has(member.value)
+    );
+    if (removedBlockedMember) {
+      const message = `${removedBlockedMember.label} already participated in payments and cannot be removed.`;
       setMemberError(message);
       alert(message);
       return;
     }
 
-    setMembers((prev) => prev.filter((member) => member.value !== memberToDelete.value));
+    setMembers(nextMembers);
     setMemberError(null);
   };
 
@@ -196,36 +197,17 @@ export default function EditGroup({
       <div id="group-member">
         <h2>Group members</h2>
         <div className="group-member-list-container">
-          {members.map((member) => (
-            <div className="group-member-container" key={member.value}>
-              <div className="group-member-item group-new-member">{member.label}</div>
-              <button
-                className="group-member-item delete-group-member-button"
-                onClick={() => handleDeleteMember(member)}
-                type="button"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-
-          <div className="group-member-add">
-            <div className="group-member-select">
-              <Select
-                options={friendOptions}
-                classNamePrefix="rs"
-                onChange={(option) => setSelectedFriend(option as SelectOption | null)}
-                value={selectedFriend}
-              />
-            </div>
-            <button
-              className="group-member-item add-group-member-button"
-              onClick={handleAddMember}
-              type="button"
-            >
-              Add member
-            </button>
-          </div>
+          <Select<SelectOption, true>
+            className="group-member-select"
+            classNamePrefix="rs"
+            closeMenuOnSelect={false}
+            isClearable={false}
+            isMulti
+            onChange={handleMembersChange}
+            options={memberOptions}
+            placeholder="Select friends"
+            value={members}
+          />
           {memberError ? <p className="field-error">{memberError}</p> : null}
           <input type="hidden" name="membersString" value={JSON.stringify(members)} />
         </div>

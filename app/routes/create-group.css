@@ -27,6 +27,23 @@
     gap: 0.5rem; /* optional spacing between items */
 }
 
+.group-member-select {
+  max-width: 30rem;
+}
+
+.group-member-select .rs__value-container {
+  gap: 0.25rem;
+}
+
+.group-member-select .rs__multi-value {
+  max-width: 100%;
+}
+
+.group-member-select .rs__multi-value__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .delete-group-member-button {
   cursor: pointer;
   display: inline-block;
