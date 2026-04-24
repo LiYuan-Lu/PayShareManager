@@ -2,7 +2,7 @@ import { Form } from "react-router";
 import { useState, useRef, useEffect, type FormEvent, type JSX } from "react";
 
 import { calculateGroupSettlement, getGroup} from "../data/group-data";
-import type { Payment, PaymentList } from "../data/group-data";
+import type { Member, Payment, PaymentList } from "../data/group-data";
 import type { Route } from "./+types/group";
 
 import Modal from "../components/modal";
@@ -129,11 +129,27 @@ export default function Group({
         </div>
 
 
-        <Form action={`/groups/${group.uniqueId}/members`}>
-          <button className="add-button member-button" type="submit">
+        <div className="member-summary">
+          <button
+            aria-describedby={`members-${group.uniqueId}`}
+            className="add-button member-button"
+            type="button"
+          >
             Members: {Array.isArray(group.members) ? group.members.length : 0}
           </button>
-        </Form>
+          <div className="member-popover" id={`members-${group.uniqueId}`} role="tooltip">
+            <h3>Members</h3>
+            {Array.isArray(group.members) && group.members.length ? (
+              <ul>
+                {group.members.map((member: Member) => (
+                  <li key={member.uniqueId}>{member.name}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>No members.</p>
+            )}
+          </div>
+        </div>
         <h2>Payments</h2>
         <div>
           <button className="add-button bottom-space" onClick={openModal}>

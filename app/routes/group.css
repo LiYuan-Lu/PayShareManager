@@ -79,6 +79,61 @@
   background: linear-gradient(180deg, #11867a, #0d5f59);
 }
 
+.member-summary {
+  position: relative;
+  display: inline-block;
+}
+
+.member-popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.5rem);
+  min-width: 12rem;
+  max-width: min(18rem, 80vw);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 0.75rem 0.85rem;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.25rem);
+  transition: opacity 150ms ease, transform 150ms ease;
+  z-index: 20;
+}
+
+.member-summary:hover .member-popover,
+.member-summary:focus-within .member-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.member-popover h3 {
+  font-size: 0.9rem;
+  margin: 0 0 0.4rem;
+}
+
+.member-popover ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.member-popover li {
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+}
+
+.member-popover p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 .bottom-space {
   margin-bottom: 1rem;
 }
