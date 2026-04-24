@@ -5,7 +5,7 @@ import {
 } from "react";
 import Select from "react-select";
 
-import type { Member, Payment } from "../data/group-data";
+import type { Member, Payment } from "../data/settlement";
 
 type SelectOption = { label: string; value: string };
 type SplitMode = "equal" | "shares";

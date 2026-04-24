@@ -1,8 +1,7 @@
 import { matchSorter } from "match-sorter";
 // @ts-expect-error - no types, but it's a tiny function
 import sortBy from "sort-by";
-import invariant from "tiny-invariant";
-import { v4 as uuidv4 } from 'uuid';
+import type { DataRepositories } from "./repositories/types";
 
 export type FriendMutation = {
   uniqueId?: string;
@@ -10,54 +9,20 @@ export type FriendMutation = {
   email: string;
 };
 
-const fakeFriends = {
-  records: {} as Record<string, FriendMutation>,
+let repositories: DataRepositories | null = null;
 
-  async getAll(): Promise<FriendMutation[]> {
-    return Object.keys(fakeFriends.records)
-      .map((key) => fakeFriends.records[key])
-      .sort(sortBy("-createdAt", "name"));
-  },
-
-  async get(id: string): Promise<FriendMutation | null> {
-    return fakeFriends.records[id] || null;
-  },
-
-  async getUniqueId(): Promise<string> {
-    let uniqueId = '';
-    do {
-      uniqueId = uuidv4();
-    } 
-    while(uniqueId in fakeFriends.records);
-
-    return uniqueId;
-  },
-
-  async create(values: FriendMutation): Promise<FriendMutation> {
-    const uniqueId = await this.getUniqueId();
-    const createdAt = new Date().toISOString();
-    const newFriend = { uniqueId, createdAt, ...values };
-    fakeFriends.records[uniqueId] = newFriend;
-    return newFriend;
-  },
-
-  async set(uniqueId: string, values: FriendMutation): Promise<FriendMutation> {
-    const friend = await fakeFriends.get(uniqueId);
-    invariant(friend, `No friend found for ${uniqueId}`);
-    const updatedFriend = { ...friend, ...values };
-    fakeFriends.records[uniqueId] = updatedFriend;
-    return updatedFriend;
-  },
-
-  destroy(uniqueId: string): null {
-    delete fakeFriends.records[uniqueId];
-    return null;
-  },
-};
+async function getRepositories() {
+  if (!repositories) {
+    const { getRepositories } = await import("./repositories/index.server.js");
+    repositories = getRepositories();
+  }
+  return repositories;
+}
 
 export async function getFriends(query?: string | null) {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  let friends = await fakeFriends.getAll();
+  const repository = await getRepositories();
+  let friends = await repository.getFriends();
   if (query) {
     friends = matchSorter(friends, query, {
       keys: ["name", "description"],
@@ -67,47 +32,25 @@ export async function getFriends(query?: string | null) {
 }
 
 export async function createEmptyFriend() {
-  const friend = await fakeFriends.create({name: "", email: ""});
-  return friend;
+  const repository = await getRepositories();
+  return repository.createFriend({name: "", email: ""});
 }
 
 export async function getFriend(uniqueId: string) {
-  const friend = await fakeFriends.get(uniqueId); 
+  const repository = await getRepositories();
+  const friend = await repository.getFriend(uniqueId); 
   if (!friend) {
     console.log(`No friend found for ${uniqueId}`);
   }
-  return fakeFriends.get(uniqueId);
-}
-
-export async function updateFriend(uniqueId: string, updates: FriendMutation) {
-  const friend = await fakeFriends.get(uniqueId);
-  if (!friend) {
-    throw new Error(`No friend found for ${uniqueId}`);
-  }
-  const updatedFriend = { ...friend, ...updates };
-  await fakeFriends.set(uniqueId, updatedFriend);
   return friend;
 }
 
-export async function deleteFriend(uniqueId: string) {
-  fakeFriends.destroy(uniqueId);
+export async function updateFriend(uniqueId: string, updates: FriendMutation) {
+  const repository = await getRepositories();
+  return repository.updateFriend(uniqueId, updates);
 }
 
-[
-  {
-    name: "Friend 1",
-    email: "test@test.com"
-  },
-  {
-    name: "Friend 2",
-    email: "test@test.com"
-  },
-  {
-    name: "Friend 3",
-    email: "test@test.com"
-  },
-].forEach((friend) => {
-  fakeFriends.create({
-    ...friend,
-  });
-});
+export async function deleteFriend(uniqueId: string) {
+  const repository = await getRepositories();
+  await repository.deleteFriend(uniqueId);
+}

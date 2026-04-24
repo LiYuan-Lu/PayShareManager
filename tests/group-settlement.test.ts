@@ -6,7 +6,7 @@ import {
   type GroupRecord,
   type Member,
   type Payment,
-} from "../app/data/group-data.js";
+} from "../app/data/settlement.js";
 
 const you: Member = { uniqueId: "0", name: "You" };
 const alex: Member = { uniqueId: "alex", name: "Alex" };

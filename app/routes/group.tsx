@@ -1,8 +1,13 @@
 import { Form } from "react-router";
 import { useState, useRef, useEffect, type FormEvent, type JSX } from "react";
 
-import { calculateGroupSettlement, getGroup} from "../data/group-data";
-import type { Member, Payment, PaymentList } from "../data/group-data";
+import { getGroup} from "../data/group-data";
+import {
+  calculateGroupSettlement,
+  type Member,
+  type Payment,
+  type PaymentList,
+} from "../data/settlement";
 import type { Route } from "./+types/group";
 
 import Modal from "../components/modal";
