@@ -60,32 +60,57 @@ export default function Friend({
   const isDeleteDisabled = usage.groupCount > 0 || usage.paymentCount > 0;
 
   return (
-    <div id="friend">
-      <div className="friend-header">
-        <h1>
-          {friend.name ? (
-            <>
-              {friend.name}
-            </>
-          ) : (
-            <i>No Name</i>
-          )}
-        </h1>
-
+    <div id="friend" className="friend-shell">
+      <div className="friend-hero">
+        <div>
+          <p className="friend-eyebrow">Friend settings</p>
+          <h1>{friend.name ? friend.name : <i>No Name</i>}</h1>
+          <p className="friend-subtitle">
+            Manage this local friend record. Account invites can be added after login is available.
+          </p>
+        </div>
+        <div className="friend-usage-metrics">
+          <div className="friend-metric">
+            <span>Groups</span>
+            <strong>{usage.groupCount}</strong>
+          </div>
+          <div className="friend-metric">
+            <span>Payments</span>
+            <strong>{usage.paymentCount}</strong>
+          </div>
+        </div>
       </div>
 
-      <Form key={friend.uniqueId} method="post" className="friend-form">
-        <label>
-          <span>Name</span>
-          <input
-            aria-label="Name"
-            defaultValue={friend.name}
-            name="name"
-            placeholder="Name"
-            required
-            type="text"
-          />
-        </label>
+      <Form key={friend.uniqueId} method="post" className="friend-settings-form">
+        <section className="friend-section">
+          <div className="friend-section-copy">
+            <h2>Profile</h2>
+            <p>This name is used in groups and payment records.</p>
+          </div>
+          <label className="friend-field">
+            <span>Name</span>
+            <input
+              aria-label="Name"
+              defaultValue={friend.name}
+              name="name"
+              placeholder="Friend name"
+              required
+              type="text"
+            />
+          </label>
+        </section>
+
+        {isDeleteDisabled ? (
+          <div className="friend-warning">
+            <strong>Delete unavailable</strong>
+            <p>
+              This friend is used in {usage.groupCount} group
+              {usage.groupCount === 1 ? "" : "s"} and {usage.paymentCount} payment
+              {usage.paymentCount === 1 ? "" : "s"}. Remove those references before deleting.
+            </p>
+          </div>
+        ) : null}
+        {actionData?.error ? <p className="field-error">{actionData.error}</p> : null}
 
         <div className="friend-actions">
           <button name="intent" type="submit" value="save">
@@ -107,15 +132,6 @@ export default function Friend({
           </button>
         </div>
       </Form>
-
-      {isDeleteDisabled ? (
-        <p className="friend-usage-note">
-          This friend is used in {usage.groupCount} group
-          {usage.groupCount === 1 ? "" : "s"} and {usage.paymentCount} payment
-          {usage.paymentCount === 1 ? "" : "s"}, so they cannot be deleted.
-        </p>
-      ) : null}
-      {actionData?.error ? <p className="field-error">{actionData.error}</p> : null}
     </div>
   );
 }
