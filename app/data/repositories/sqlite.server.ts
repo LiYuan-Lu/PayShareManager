@@ -1,8 +1,8 @@
 import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { v4 as uuidv4 } from "uuid";
 
 import type { FriendMutation } from "../friend-data";
 import type {
@@ -143,7 +143,7 @@ function seed(database: Database.Database) {
       { name: "Friend 3", email: "test@test.com" },
     ].forEach((friend) => {
       insertFriend.run({
-        uniqueId: uuidv4(),
+        uniqueId: randomUUID(),
         createdAt: new Date().toISOString(),
         ...friend,
       });
@@ -151,7 +151,7 @@ function seed(database: Database.Database) {
   }
 
   if (groupCount.count === 0) {
-    const uniqueId = uuidv4();
+    const uniqueId = randomUUID();
     const createdAt = new Date().toISOString();
     database.prepare(`
       INSERT INTO groups (unique_id, name, description, favorite, created_at, payment_next_id)
@@ -185,7 +185,7 @@ function getUniqueId(table: "friends" | "groups", column = "unique_id") {
   const database = getDb();
   let uniqueId = "";
   do {
-    uniqueId = uuidv4();
+    uniqueId = randomUUID();
   } while (
     database
       .prepare(`SELECT 1 FROM ${table} WHERE ${column} = ?`)
