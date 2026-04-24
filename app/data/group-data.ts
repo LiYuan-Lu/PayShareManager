@@ -304,6 +304,18 @@ export function calculateGroupSettlement(group: GroupRecord | null | undefined):
   };
 }
 
+export function getGroupPaymentMemberIds(group: GroupRecord | null | undefined) {
+  const memberIds = new Set<string>();
+
+  group?.paymentList?.forEach((payment) => {
+    memberIds.add(payment.payer.uniqueId);
+    payment.shareMember?.forEach((member) => memberIds.add(member.uniqueId));
+    payment.shareDetails?.forEach((item) => memberIds.add(item.member.uniqueId));
+  });
+
+  return memberIds;
+}
+
 export async function addPayment(uniqueId: string, payment: Payment) {
   const group = await fakeGroups.get(uniqueId);
   if (!group) {
