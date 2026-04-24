@@ -3,7 +3,7 @@ import { matchSorter } from "match-sorter";
 import sortBy from "sort-by";
 import invariant from "tiny-invariant";
 import { v4 as uuidv4 } from 'uuid';
-import { getFriends } from "./friend-data";
+import { getFriends } from "./friend-data.js";
 
 export type Payment = 
 {
