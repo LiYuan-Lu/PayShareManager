@@ -541,17 +541,18 @@ p span {
 
 .share-units-list p {
   margin: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.6rem;
 }
 
 .share-units-list p span {
-  min-width: 10rem;
+  min-width: 0;
 }
 
 .share-units-list p input[type="number"] {
-  width: 7rem;
+  width: 3.2rem;
 }
 
 .share-stepper {
@@ -589,10 +590,21 @@ p span {
 }
 
 .share-estimate {
-  min-width: 4.5rem;
+  min-width: 4.75rem;
   text-align: right;
   font-weight: 700;
   color: var(--primary);
+}
+
+@media (max-width: 560px) {
+  .share-units-list p {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .share-estimate {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
 }
 
 /* react-select theme */

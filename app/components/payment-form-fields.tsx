@@ -2,7 +2,6 @@ import {
   forwardRef,
   useImperativeHandle,
   useState,
-  type ChangeEvent,
 } from "react";
 import Select from "react-select";
 
@@ -10,6 +9,7 @@ import type { Member, Payment } from "../data/group-data";
 
 type SelectOption = { label: string; value: string };
 type SplitMode = "equal" | "shares";
+type SplitModeOption = { label: string; value: SplitMode };
 
 type PaymentFormErrors = {
   cost?: string;
@@ -24,8 +24,6 @@ export type PaymentFormFieldsHandle = {
 
 type PaymentFormFieldsProps = {
   defaultDate?: string;
-  defaultName?: string;
-  defaultCost?: number;
   members: Member[];
   payment?: Payment;
 };
@@ -55,13 +53,15 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
   function PaymentFormFields(
     {
       defaultDate,
-      defaultName = "Name",
-      defaultCost = 0,
       members,
       payment,
     },
     ref
   ) {
+    const splitModeOptions: SplitModeOption[] = [
+      { label: "Equal", value: "equal" },
+      { label: "By Shares", value: "shares" },
+    ];
     const memberOptions: SelectOption[] = members.map((member) => ({
       label: member.name,
       value: member.uniqueId,
@@ -82,11 +82,13 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
     const [splitMode, setSplitMode] = useState<SplitMode>(
       payment?.splitMode === "shares" ? "shares" : "equal"
     );
+    const selectedSplitMode =
+      splitModeOptions.find((option) => option.value === splitMode) ?? splitModeOptions[0];
     const [shareUnitsMap, setShareUnitsMap] =
       useState<Record<string, number>>(() => getInitialShareUnits(payment));
     const [formErrors, setFormErrors] = useState<PaymentFormErrors>({});
     const [paymentCostValue, setPaymentCostValue] = useState<string>(
-      String(payment?.cost ?? defaultCost)
+      payment?.cost === undefined ? "" : String(payment.cost)
     );
 
     const validate = () => {
@@ -169,7 +171,7 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
           <span>Name</span>
           <input
             aria-label="Name"
-            defaultValue={payment?.name ?? defaultName}
+            defaultValue={payment?.name ?? ""}
             name="name"
             placeholder="Name"
             type="text"
@@ -183,7 +185,7 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
             min={0}
             name="cost"
             onChange={(event) => setPaymentCostValue(event.target.value)}
-            placeholder="Cost"
+            placeholder="Enter amount"
             step="0.01"
             type="number"
             value={paymentCostValue}
@@ -219,16 +221,14 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
         {formErrors.payer ? <p className="field-error">{formErrors.payer}</p> : null}
         <p>
           <span>Split Mode</span>
-          <select
+          <Select
             name="splitMode"
-            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-              setSplitMode(event.currentTarget.value === "shares" ? "shares" : "equal")
-            }
-            value={splitMode}
-          >
-            <option value="equal">Equal</option>
-            <option value="shares">By Shares</option>
-          </select>
+            options={splitModeOptions}
+            classNamePrefix="rs"
+            value={selectedSplitMode}
+            onChange={(option) => setSplitMode(option?.value ?? "equal")}
+            isSearchable={false}
+          />
         </p>
         <p>
           <span>Shared By</span>
