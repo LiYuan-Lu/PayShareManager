@@ -1,0 +1,21 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Friends icon</title>
+  <desc id="desc">Two simplified people standing together, one with an arm around the other's shoulder.</desc>
+
+  <!-- background is transparent -->
+
+  <!-- right friend -->
+  <circle cx="158" cy="82" r="31" fill="#CBD5E1" stroke="#1E293B" stroke-width="10"/>
+  <path d="M113 199V169C113 138.6 132.7 118 160 118H165C193.2 118 215 139.8 215 168V199C215 207.8 207.8 215 199 215H129C120.2 215 113 207.8 113 199Z" fill="#CBD5E1" stroke="#1E293B" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- left friend -->
+  <circle cx="98" cy="78" r="34" fill="#3B82F6" stroke="#1E293B" stroke-width="10"/>
+  <path d="M42 199V165C42 134.1 67.1 109 98 109C128.9 109 154 134.1 154 165V199C154 207.8 146.8 215 138 215H58C49.2 215 42 207.8 42 199Z" fill="#3B82F6" stroke="#1E293B" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- arm over shoulder -->
+  <path d="M130 124C146 119 160 119 176 124" stroke="#1E293B" stroke-width="16" stroke-linecap="round"/>
+  <path d="M130 124C146 119 160 119 176 124" stroke="#F8FAFC" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- simple heart -->
+  <path d="M128 43C123.5 35.5 112 36.5 109 46C106 56 118.5 65 128 73C137.5 65 150 56 147 46C144 36.5 132.5 35.5 128 43Z" fill="#F472B6" stroke="#1E293B" stroke-width="6" stroke-linejoin="round"/>
+</svg>

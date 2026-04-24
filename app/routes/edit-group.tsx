@@ -41,7 +41,7 @@ export default function EditGroup({
         />
       </p>
       <p>
-        <span>Desription</span>
+        <span>Description</span>
         <input
           aria-label="Description"
           defaultValue={group.description}

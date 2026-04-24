@@ -46,7 +46,7 @@ export default function Group({
   const [paymentCostValue, setPaymentCostValue] = useState<number>(0);
 
   const [paymentList, setPaymentList] = useState<PaymentList>();
-  const paymentNametRef = useRef<HTMLInputElement>(null);
+  const paymentNameRef = useRef<HTMLInputElement>(null);
   const paymentCostRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -204,10 +204,10 @@ export default function Group({
 
         <Form action={`/groups/${group.uniqueId}/members`}>
           <button className="add-button member-button" type="submit">
-            👥 Member : {Array.isArray(group.members) ? group.members.length : 0} people
+            Members: {Array.isArray(group.members) ? group.members.length : 0}
           </button>
         </Form>
-        <h2>Payment list</h2>
+        <h2>Payments</h2>
         <div>
           <button className="add-button bottom-space" onClick={openModal}>
             Add Payment
@@ -260,7 +260,7 @@ export default function Group({
                   name="name"
                   placeholder="Name"
                   type="text"
-                  ref={paymentNametRef}
+                  ref={paymentNameRef}
                 />
               </p>
               <p>
@@ -288,7 +288,7 @@ export default function Group({
                 />
               </p>
               <div>
-                <p>Paid by</p>
+                <p>Paid By</p>
                 <Select 
                   name="payer"
                   options={options}
@@ -313,7 +313,7 @@ export default function Group({
                   <option value="equal">Equal</option>
                   <option value="shares">By Shares</option>
                 </select>
-                <p>Shared by</p>
+                <p>Shared By</p>
                 <Select
                   options={options} 
                   classNamePrefix="rs"
@@ -400,7 +400,7 @@ export default function Group({
           )}
         </div>
         <h2>Settlement Summary</h2>
-        <div className="payment-container payment-intructions">
+        <div className="payment-container payment-instructions">
           <div>Member</div>
           <div>Paid</div>
           <div>Share</div>

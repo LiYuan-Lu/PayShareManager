@@ -61,9 +61,9 @@ export type GroupRecord = GroupMutation & {
   createdAt: string;
 };
 
-const kUserUiqueId = "0";
+const kUserUniqueId = "0";
 const kUserName = "You";
-const kUser = {uniqueId: kUserUiqueId, name: kUserName};
+const kUser = {uniqueId: kUserUniqueId, name: kUserName};
 
 const fakeGroups = {
   records: {} as Record<string, GroupRecord>,

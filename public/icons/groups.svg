@@ -1,0 +1,19 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Group Icon</title>
+  <desc id="desc">A simple SVG icon representing a group of people.</desc>
+
+  <!-- Back left person -->
+  <circle cx="72" cy="82" r="30" fill="#B8C2CC" stroke="#1F2937" stroke-width="10"/>
+  <path d="M30 186C34 145 50 124 72 124C94 124 110 145 114 186C115 196 108 204 98 204H46C36 204 29 196 30 186Z"
+        fill="#B8C2CC" stroke="#1F2937" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- Back right person -->
+  <circle cx="184" cy="82" r="30" fill="#B8C2CC" stroke="#1F2937" stroke-width="10"/>
+  <path d="M142 186C146 145 162 124 184 124C206 124 222 145 226 186C227 196 220 204 210 204H158C148 204 141 196 142 186Z"
+        fill="#B8C2CC" stroke="#1F2937" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- Front center person -->
+  <circle cx="128" cy="72" r="38" fill="#4DA3FF" stroke="#1F2937" stroke-width="10"/>
+  <path d="M64 214C69 163 93 134 128 134C163 134 187 163 192 214C193 225 185 234 174 234H82C71 234 63 225 64 214Z"
+        fill="#4DA3FF" stroke="#1F2937" stroke-width="10" stroke-linejoin="round"/>
+</svg>

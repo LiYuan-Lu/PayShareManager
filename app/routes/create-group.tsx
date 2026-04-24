@@ -92,7 +92,7 @@ export default function CreateGroup({
         />
       </p>
       <p>
-        <span>Desription</span>
+        <span>Description</span>
         <input
           aria-label="Description"
           defaultValue=""
@@ -114,7 +114,7 @@ export default function CreateGroup({
                   <div className="group-member-item group-new-member">{member.label}</div>
                   <div
                   id="delete-member"
-                  className="group-memeber-item delete-group-member-button"
+                  className="group-member-item delete-group-member-button"
                   onClick={ ()=>handleDelete(index) }
                   >Delete</div>
                 </div>

@@ -284,28 +284,32 @@ form[action$="destroy"] button {
   margin: 0;
   display: inline-flex;
   align-items: center;
+  gap: 0.4rem;
 }
 
-.nav-section-title-groups .nav-section-label::before,
-.nav-section-title-friends .nav-section-label::before {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.25rem;
-  margin-right: 0.35rem;
-}
-
-.nav-section-title-groups .nav-section-label::before {
-  content: "👥";
-}
-
-.nav-section-title-friends .nav-section-label::before {
-  content: "🙂";
+.nav-section-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+  flex-shrink: 0;
 }
 
 .nav-section-chevron {
-  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+}
+
+.nav-section-chevron-icon {
+  color: currentColor;
+  display: block;
+  transform: rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.nav-section-chevron-icon-open {
+  transform: rotate(90deg);
 }
 
 .nav-cta {
