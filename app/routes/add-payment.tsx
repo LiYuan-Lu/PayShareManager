@@ -3,6 +3,10 @@ import { addPayment, getMember } from "../data/group-data";
 import type { Payment, Member, PaymentShare } from "../data/group-data";
 import type { Route } from "./+types/add-payment";
 
+export default function AddPaymentRoute() {
+  return null;
+}
+
 export async function action({ params, request }: Route.ActionArgs) {
   if(!params.uniqueId)
   {

@@ -1,15 +1,21 @@
-import React, { type FormEvent, type MouseEvent } from 'react';
+import type { FormEvent, MouseEvent, PropsWithChildren } from 'react';
 import { Form } from "react-router";
 import './modal.css';
 
-interface ModalProps extends React.PropsWithChildren{
+interface ModalProps extends PropsWithChildren {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancel: (msg: string) => void;
   closeModal: (msg: string) => void;
   postTarget: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ onSubmit, onCancel, closeModal, postTarget, children }) => {
+export default function Modal({
+  onSubmit,
+  onCancel,
+  closeModal,
+  postTarget,
+  children,
+}: ModalProps) {
   const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
     // Make sure you cast e.target to HTML element to check className
     if ((e.target as HTMLElement).className === 'modal-container') {
@@ -45,6 +51,4 @@ const Modal: React.FC<ModalProps> = ({ onSubmit, onCancel, closeModal, postTarge
       </div>
     </div>
   );
-};
-
-export default Modal;
+}
