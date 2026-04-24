@@ -360,16 +360,41 @@ export function getSqliteRepositories(): DataRepositories {
       if (!existing) {
         throw new Error(`No friend found for ${uniqueId}`);
       }
-      getDb().prepare(`
-        UPDATE friends
-        SET name = ?, email = ?
-        WHERE unique_id = ?
-      `).run(values.name, values.email, uniqueId);
+      const database = getDb();
+      const transaction = database.transaction(() => {
+        database.prepare(`
+          UPDATE friends
+          SET name = ?, email = ?
+          WHERE unique_id = ?
+        `).run(values.name, values.email, uniqueId);
+        database.prepare("UPDATE group_members SET name = ? WHERE member_id = ?").run(values.name, uniqueId);
+        database.prepare("UPDATE payments SET payer_name = ? WHERE payer_id = ?").run(values.name, uniqueId);
+        database.prepare("UPDATE payment_shares SET member_name = ? WHERE member_id = ?").run(values.name, uniqueId);
+      });
+      transaction();
       return { ...existing, ...values, uniqueId };
     },
 
     async deleteFriend(uniqueId) {
       getDb().prepare("DELETE FROM friends WHERE unique_id = ?").run(uniqueId);
+    },
+
+    async getFriendUsage(uniqueId) {
+      const database = getDb();
+      const groupUsage = database
+        .prepare("SELECT COUNT(*) AS count FROM group_members WHERE member_id = ?")
+        .get(uniqueId) as { count: number };
+      const payerUsage = database
+        .prepare("SELECT COUNT(*) AS count FROM payments WHERE payer_id = ?")
+        .get(uniqueId) as { count: number };
+      const shareUsage = database
+        .prepare("SELECT COUNT(*) AS count FROM payment_shares WHERE member_id = ?")
+        .get(uniqueId) as { count: number };
+
+      return {
+        groupCount: groupUsage.count,
+        paymentCount: payerUsage.count + shareUsage.count,
+      };
     },
 
     async getGroups() {

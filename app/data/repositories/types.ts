@@ -7,6 +7,7 @@ export type FriendRepository = {
   createFriend: (values: FriendMutation) => Promise<FriendMutation>;
   updateFriend: (uniqueId: string, values: FriendMutation) => Promise<FriendMutation>;
   deleteFriend: (uniqueId: string) => Promise<void>;
+  getFriendUsage: (uniqueId: string) => Promise<FriendUsage>;
 };
 
 export type GroupRepository = {
@@ -25,3 +26,8 @@ export type GroupRepository = {
 };
 
 export type DataRepositories = FriendRepository & GroupRepository;
+
+export type FriendUsage = {
+  groupCount: number;
+  paymentCount: number;
+};

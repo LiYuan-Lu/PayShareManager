@@ -1,6 +1,6 @@
 import { Form, redirect, useNavigate } from "react-router";
 import type { Route } from "./+types/create-friend";
-import { updateFriend, createEmptyFriend } from "../data/friend-data";
+import { createFriend } from "../data/friend-data";
 
 import "./create-group.css";
 
@@ -10,22 +10,15 @@ export async function action({
 }: Route.ActionArgs) {
     const formData = await request.formData();
 
-    const name = formData.get('name');
-    if(!name)
-    {
-        return;
-    }
-    const friend = await createEmptyFriend();
-    if(!friend.uniqueId)
-    {
-      return;
-    }
-
-    const updates = {
+    const values = {
       name: formData.get('name')?.toString() || '',
       email: formData.get('email')?.toString() || '',
     };
-    await updateFriend(friend.uniqueId, updates);
+    if (!values.name.trim()) {
+      return null;
+    }
+
+    const friend = await createFriend(values);
     return redirect(`/friends/${friend.uniqueId}`);
 }
 
@@ -51,7 +44,6 @@ export default function CreateFriend({
             name="email"
             placeholder="Email"
             type="email"
-            required
             pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
             />
         </p>

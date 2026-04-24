@@ -437,6 +437,75 @@ i {
   margin: 0.8rem 0 1.15rem;
 }
 
+.friend-header {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.15rem;
+  padding-bottom: 0.8rem;
+}
+
+.friend-meta {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.friend-meta a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.friend-meta a:hover {
+  text-decoration: underline;
+}
+
+.friend-form {
+  display: grid;
+  gap: 0.85rem;
+  max-width: 30rem;
+}
+
+.friend-form label {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.friend-form label span {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.friend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-left: 5.75rem;
+}
+
+.danger-button {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 85%, white), var(--danger));
+  border-color: color-mix(in srgb, var(--danger) 72%, var(--border));
+}
+
+.danger-button:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 75%, white), var(--danger));
+}
+
+button:disabled,
+button:disabled:hover {
+  background: color-mix(in srgb, var(--text-muted) 18%, var(--surface));
+  border-color: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.friend-usage-note {
+  max-width: 38rem;
+  margin: 1rem 0 0;
+  color: var(--text-muted);
+}
+
 .nav-empty {
   margin: 0.25rem 0 0.9rem;
   padding: 0.25rem 0.1rem;
@@ -597,6 +666,15 @@ p span {
 }
 
 @media (max-width: 560px) {
+  .friend-form label {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+
+  .friend-actions {
+    padding-left: 0;
+  }
+
   .share-units-list p {
     grid-template-columns: minmax(0, 1fr) auto;
   }
