@@ -1,0 +1,49 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="128" y1="96" x2="896" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="0.45" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#1E1B4B"/>
+    </linearGradient>
+
+    <linearGradient id="coin" x1="320" y1="248" x2="704" y2="776" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DCEBFF"/>
+    </linearGradient>
+
+    <filter id="shadow" x="176" y="188" width="672" height="704" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="34" stdDeviation="36" flood-color="#0F172A" flood-opacity="0.32"/>
+    </filter>
+
+    <filter id="softHighlight" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+  </defs>
+
+  <!-- iOS-style rounded app icon background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+
+  <!-- subtle premium highlights -->
+  <circle cx="258" cy="198" r="180" fill="#FFFFFF" opacity="0.18" filter="url(#softHighlight)"/>
+  <circle cx="800" cy="830" r="220" fill="#60A5FA" opacity="0.18" filter="url(#softHighlight)"/>
+
+  <!-- main symbol: split/shared payment -->
+  <g filter="url(#shadow)">
+    <!-- coin/card circle -->
+    <circle cx="512" cy="512" r="276" fill="url(#coin)"/>
+
+    <!-- split gap -->
+    <path d="M512 278V746" stroke="#2563EB" stroke-width="68" stroke-linecap="round"/>
+
+    <!-- two simplified user dots, large enough for small icon -->
+    <circle cx="412" cy="418" r="56" fill="#2563EB"/>
+    <circle cx="612" cy="418" r="56" fill="#2563EB"/>
+
+    <!-- two simplified bodies / share sides -->
+    <path d="M314 630C330 558 366 526 412 526C458 526 494 558 510 630" stroke="#2563EB" stroke-width="58" stroke-linecap="round"/>
+    <path d="M514 630C530 558 566 526 612 526C658 526 694 558 710 630" stroke="#2563EB" stroke-width="58" stroke-linecap="round"/>
+  </g>
+
+  <!-- thin glass edge for app-store polish -->
+  <rect x="18" y="18" width="988" height="988" rx="206" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="36"/>
+</svg>

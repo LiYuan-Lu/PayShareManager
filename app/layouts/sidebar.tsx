@@ -106,7 +106,10 @@ export default function SidebarLayout({
       <div id="sidebar">
         <div className="sidebar-brand">
           <h1 className="brand-title">
-            <Link to="about">Pay Share Manager</Link>
+            <Link to="/">
+              <img alt="" className="brand-icon" src="/icons/app.svg" />
+              <span>Pay Share Manager</span>
+            </Link>
           </h1>
           <button
             aria-label="Toggle dark mode"
@@ -220,6 +223,12 @@ export default function SidebarLayout({
             </>
           ) : null}
         </nav>
+        <div className="sidebar-footer">
+          <NavLink to="/about">
+            <img alt="" className="nav-section-icon" src="/icons/app.svg" />
+            About
+          </NavLink>
+        </div>
       </div>
       <div
         className={

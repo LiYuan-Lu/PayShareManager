@@ -1,21 +1,25 @@
-import { Link } from "react-router";
-
 export default function About() {
   return (
     <div id="about">
-      <Link to="/">← Go to home</Link>
-      <h1>About Pay Share Manager</h1>
+      <div className="about-header">
+        <img alt="" className="about-icon" src="/icons/app.svg" />
+        <div>
+          <p className="about-eyebrow">About</p>
+          <h1>Pay Share Manager</h1>
+        </div>
+      </div>
 
       <div>
         <p>
-        This is a web application designed to record who paid what amount and to calculate how to evenly split the bill.
+          This is a web application designed to record who paid what amount and calculate how to split shared expenses.
         </p>
         <h2>Features</h2>
-        <li><span>Payment Records: </span>Add, edit, and delete payment entries with payer names and amounts inside event.</li>
-        <li><span>Payment Records: </span>Add, edit, and delete payment entries with payer names and amounts inside event.</li>
-        <li><span>Payment Records: </span>Even Split Calculation: Automatically computes the average amount each person should contribute.</li>
-        <li><span>React Router: </span>Implements multi-page routing with React Router.</li>
-        <li><span>Intuitive Interface: </span>A clean and user-friendly design.</li>
+        <ul className="about-feature-list">
+          <li><span>Payment records</span>Add, edit, and delete payment entries inside a group.</li>
+          <li><span>Split modes</span>Split expenses equally or by custom shares.</li>
+          <li><span>Settlement summary</span>Calculate who should pay whom after all expenses are recorded.</li>
+          <li><span>Local storage</span>Persist app data with SQLite for local development and deployment.</li>
+        </ul>
       </div>
     </div>
   );

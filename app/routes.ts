@@ -49,6 +49,9 @@ export default [
         "friends/create",
         "routes/create-friend.tsx"
     ),
+    route(
+        "about",
+        "routes/about.tsx"
+    ),
   ]),
-    route("about", "routes/about.tsx"),
 ] satisfies RouteConfig;
