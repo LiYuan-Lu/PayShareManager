@@ -46,38 +46,44 @@
 
 .delete-group-member-button {
   cursor: pointer;
-  display: inline-block;
-  padding: 0.5rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.3rem;
+  padding: 0.45rem 0.85rem;
   background-color: var(--danger);
-  color: white;
-  border: none;
-  border-radius: 999px;
+  color: #fff;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
   text-align: center;
-  transition: background-color 0.3s ease;
-  font-weight: 500;
-  margin-top: 0.5rem; /* Optional: adds space above the button */
+  font-weight: 600;
+  box-shadow: var(--button-shadow);
 }
 
 .delete-group-member-button:hover {
-  background-color: color-mix(in srgb, var(--danger) 85%, white);
+  background-color: var(--danger-hover);
+  border-color: var(--danger-hover);
 }
 
 .add-group-member-button {
   cursor: pointer;
-  display: inline-block;
-  padding: 0.5rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.3rem;
+  padding: 0.45rem 0.85rem;
   background-color: var(--primary);
-  color: white;
+  color: #fff;
   text-align: center;
-  border: none;
-  border-radius: 999px;
-  font-weight: 500;
-  transition: background-color 0.3s ease;
-  margin-top: 0.5rem;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  font-weight: 600;
+  box-shadow: var(--button-shadow);
 }
 
 .add-group-member-button:hover {
-  background-color: var(--primary-strong);
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 .group-form p button:first-of-type {

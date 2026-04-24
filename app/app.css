@@ -7,14 +7,23 @@
   --text: #162031;
   --text-muted: #5f6c80;
   --primary: #2563eb;
-  --primary-strong: #1d4ed8;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --primary-soft: #eff6ff;
+  --secondary-hover: #f8fafc;
+  --secondary-active: #eef2f7;
   --nav-active: #0f766e;
   --nav-active-strong: #0d5f59;
   --border: #dde4f0;
   --shadow: 0 8px 30px rgba(28, 45, 84, 0.08);
+  --button-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --button-shadow-hover: 0 6px 14px rgba(37, 99, 235, 0.16);
   --danger: #dc2626;
-  --danger-soft: #fee2e2;
-  --success: #059669;
+  --danger-hover: #b91c1c;
+  --danger-active: #991b1b;
+  --danger-soft: #fef2f2;
+  --success: #047857;
+  --success-soft: #ecfdf5;
 }
 
 html[data-theme="dark"] {
@@ -26,14 +35,23 @@ html[data-theme="dark"] {
   --text: #e7edf8;
   --text-muted: #9cabbe;
   --primary: #60a5fa;
-  --primary-strong: #3b82f6;
+  --primary-hover: #3b82f6;
+  --primary-active: #2563eb;
+  --primary-soft: #10233f;
+  --secondary-hover: #17243b;
+  --secondary-active: #1e2f4c;
   --nav-active: #14b8a6;
   --nav-active-strong: #0d9488;
   --border: #283852;
   --shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+  --button-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --button-shadow-hover: 0 8px 18px rgba(96, 165, 250, 0.18);
   --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-active: #b91c1c;
   --danger-soft: #3a1820;
   --success: #34d399;
+  --success-soft: #0b2f25;
 }
 
 html {
@@ -102,28 +120,51 @@ button:focus-visible {
 }
 
 button {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 85%, white), var(--primary));
-  border-color: color-mix(in srgb, var(--primary) 72%, var(--border));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.45rem;
+  border-radius: 10px;
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: var(--button-shadow);
+  text-decoration: none;
 }
 
 button:hover {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--primary-strong) 85%, white),
-    var(--primary-strong)
-  );
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  box-shadow: var(--button-shadow-hover);
+}
+
+button[type="button"]:not(.add-button):not(.danger-button):not(.delete-group-member-button):not(.add-group-member-button):not(.share-stepper-btn) {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+button[type="button"]:not(.add-button):not(.danger-button):not(.delete-group-member-button):not(.add-group-member-button):not(.share-stepper-btn):hover {
+  background: var(--secondary-hover);
+  border-color: color-mix(in srgb, var(--text-muted) 28%, var(--border));
+  color: var(--text);
+  box-shadow: var(--button-shadow);
 }
 
 button:active {
   transform: translateY(1px);
 }
 
+button:not(:disabled):active {
+  background: var(--primary-active);
+  border-color: var(--primary-active);
+}
+
 form[action$="destroy"] button {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 85%, white), var(--danger));
-  border-color: color-mix(in srgb, var(--danger) 72%, var(--border));
+  background: var(--danger);
+  border-color: var(--danger);
 }
 
 .sr-only {
@@ -208,6 +249,17 @@ form[action$="destroy"] button {
   align-items: center;
   justify-content: space-between;
   gap: 0.45rem;
+  min-height: 2.1rem;
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.theme-toggle:hover {
+  background: var(--secondary-hover);
+  border-color: color-mix(in srgb, var(--text-muted) 25%, var(--border));
+  color: var(--text);
 }
 
 .theme-toggle-track {
@@ -323,7 +375,6 @@ form[action$="destroy"] button {
 .nav-cta-button {
   width: 100%;
   justify-content: center;
-  border-radius: 999px;
   padding: 0.6rem 0.9rem;
 }
 
@@ -416,7 +467,6 @@ i {
   width: 100%;
 }
 
-#group > div,
 #friend,
 .group-form {
   background: var(--surface);
@@ -483,12 +533,15 @@ i {
 }
 
 .danger-button {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 85%, white), var(--danger));
-  border-color: color-mix(in srgb, var(--danger) 72%, var(--border));
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
 }
 
 .danger-button:hover {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 75%, white), var(--danger));
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--danger) 18%, transparent);
 }
 
 button:disabled,
@@ -497,6 +550,7 @@ button:disabled:hover {
   border-color: var(--border);
   color: var(--text-muted);
   cursor: not-allowed;
+  box-shadow: none;
   transform: none;
 }
 
@@ -698,14 +752,14 @@ p span {
 
 .rs__control:hover {
   border: none !important;
-  background-color: color-mix(in srgb, var(--primary) 7%, transparent) !important;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 22%, transparent) !important;
+  background-color: var(--secondary-hover) !important;
+  box-shadow: var(--button-shadow) !important;
 }
 
 .rs__control--menu-is-open,
 .rs__control--is-focused {
-  background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--primary) 28%, transparent) !important;
+  background-color: var(--secondary-hover) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 24%, transparent) !important;
 }
 
 .rs__single-value,
@@ -744,8 +798,8 @@ p span {
 }
 
 .rs__dropdown-indicator {
-  background: color-mix(in srgb, var(--primary) 14%, var(--surface)) !important;
-  border: 1px solid color-mix(in srgb, var(--primary) 36%, var(--border)) !important;
+  background: var(--primary-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border)) !important;
   border-radius: 999px !important;
   margin-left: 0.35rem !important;
   padding: 0.2rem 0.45rem !important;
@@ -755,9 +809,9 @@ p span {
 }
 
 .rs__control:hover .rs__dropdown-indicator {
-  background: color-mix(in srgb, var(--primary) 22%, var(--surface)) !important;
-  border-color: color-mix(in srgb, var(--primary) 55%, var(--border)) !important;
-  box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 34%, transparent) !important;
+  background: var(--primary-soft) !important;
+  border-color: color-mix(in srgb, var(--primary) 38%, var(--border)) !important;
+  box-shadow: var(--button-shadow) !important;
 }
 
 .rs__dropdown-indicator svg {
@@ -787,20 +841,20 @@ p span {
 }
 
 .rs__option--is-focused {
-  background-color: color-mix(in srgb, var(--primary) 16%, var(--surface)) !important;
-  border-color: color-mix(in srgb, var(--primary) 36%, var(--border)) !important;
+  background-color: var(--primary-soft) !important;
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--border)) !important;
   transform: translateX(1px) !important;
 }
 
 .rs__option--is-selected {
   background-color: var(--primary) !important;
   color: #fff !important;
-  border-color: color-mix(in srgb, var(--primary-strong) 70%, var(--border)) !important;
+  border-color: var(--primary-hover) !important;
   box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 35%, transparent) !important;
 }
 
 .rs__multi-value {
-  background-color: color-mix(in srgb, var(--primary) 20%, var(--surface)) !important;
+  background-color: var(--primary-soft) !important;
 }
 
 .rs__multi-value__remove {
