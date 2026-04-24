@@ -12,7 +12,7 @@ export async function action({
 
     const values = {
       name: formData.get('name')?.toString() || '',
-      email: formData.get('email')?.toString() || '',
+      email: "",
     };
     if (!values.name.trim()) {
       return null;
@@ -36,16 +36,6 @@ export default function CreateFriend({
             type="text"
             required
         />
-        </p>
-        <p>
-            <span>Email</span>
-            <input
-            aria-label="Email"
-            name="email"
-            placeholder="Email"
-            type="email"
-            pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-            />
         </p>
         <div id="last-element">
 

@@ -34,7 +34,7 @@ export async function action({
 
     const updates: FriendMutation = {
         name: formData.get("name")?.toString() ?? "",
-        email: formData.get("email")?.toString() ?? ""
+        email: ""
     };
     await updateFriend(params.uniqueId, updates);
     return redirect(`/friends/${params.uniqueId}`);
@@ -72,13 +72,6 @@ export default function Friend({
           )}
         </h1>
 
-        <p className="friend-meta">
-          {friend.email ? (
-            <a href={`mailto:${friend.email}`}>{friend.email}</a>
-          ) : (
-            <span>No email</span>
-          )}
-        </p>
       </div>
 
       <Form key={friend.uniqueId} method="post" className="friend-form">
@@ -91,16 +84,6 @@ export default function Friend({
             placeholder="Name"
             required
             type="text"
-          />
-        </label>
-        <label>
-          <span>Email</span>
-          <input
-            aria-label="Email"
-            defaultValue={friend.email}
-            name="email"
-            placeholder="Email"
-            type="email"
           />
         </label>
 
