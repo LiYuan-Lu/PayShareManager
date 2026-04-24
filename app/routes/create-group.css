@@ -1,34 +1,85 @@
-#group-member {
-  border-top: 2px solid var(--border);
-  margin-top: 1rem;          /* Space above the line */
-  padding-top: 1rem;         /* Space below the line */
-}
-.group-member-container {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem; /* optional spacing between items */
-
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  padding: 8px;  /* Padding inside the container */
-  border-radius: 10px; /* Optional rounded corners */
-  margin-bottom: 0.5rem; /* Space between items */
-  background-color: var(--surface);
+.product-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
 }
 
-.group-member-add {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items:center;
-    
-    gap: 0.5rem; /* optional spacing between items */
+.form-header {
+  padding: 1.25rem 1.35rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.form-header h1 {
+  margin: 0;
+  font-size: 1.65rem;
+  line-height: 1.2;
+}
+
+.form-section {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.48fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 0.25rem 1.35rem 1rem;
+}
+
+.form-section-copy h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.form-section-copy p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.form-fields {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.form-field span {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.form-field input {
+  width: 100%;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 82%, var(--surface-soft));
 }
 
 .group-member-select {
-  max-width: 30rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.group-member-select .rs__control {
+  min-height: 2.75rem !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  background: color-mix(in srgb, var(--surface) 82%, var(--surface-soft)) !important;
+  padding: 0 0.35rem !important;
 }
 
 .group-member-select .rs__value-container {
@@ -37,69 +88,67 @@
 
 .group-member-select .rs__multi-value {
   max-width: 100%;
+  border-radius: 8px !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border)) !important;
 }
 
 .group-member-select .rs__multi-value__label {
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 600 !important;
 }
 
-.delete-group-member-button {
-  cursor: pointer;
-  display: inline-flex;
+.member-included {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 2.3rem;
-  padding: 0.45rem 0.85rem;
-  background-color: var(--danger);
-  color: #fff;
-  border: 1px solid var(--danger);
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  text-align: center;
+  background: var(--secondary-hover);
+  padding: 0.55rem 0.75rem;
+}
+
+.member-included span {
+  color: var(--text);
   font-weight: 600;
-  box-shadow: var(--button-shadow);
 }
 
-.delete-group-member-button:hover {
-  background-color: var(--danger-hover);
-  border-color: var(--danger-hover);
+.member-included small {
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
-.add-group-member-button {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.3rem;
-  padding: 0.45rem 0.85rem;
-  background-color: var(--primary);
-  color: #fff;
-  text-align: center;
-  border: 1px solid var(--primary);
-  border-radius: 10px;
-  font-weight: 600;
-  box-shadow: var(--button-shadow);
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.35rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-soft) 58%, var(--surface));
 }
 
-.add-group-member-button:hover {
-  background-color: var(--primary-hover);
-  border-color: var(--primary-hover);
+.form-actions button {
+  min-width: 7rem;
 }
 
-.group-form p button:first-of-type {
-  margin-right: 1rem; /* Adds space between Save (first button) and Cancel (second button) */
-}
+@media (max-width: 760px) {
+  .product-form {
+    max-width: none;
+  }
 
-#group-member label span {
-  display: block;       /* Make sure it takes a full line */
-  margin-bottom: 1rem;  /* Adjust as needed for spacing */
-}
+  .form-section {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
 
-.group-form h2 {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--primary);
-  border-bottom: 2px solid var(--border);
-  margin: 1rem 0;             /* Top and bottom margin */
-  padding-bottom: 0.5rem;     /* Padding below text and border */
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
 }

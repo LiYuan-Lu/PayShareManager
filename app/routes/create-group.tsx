@@ -4,9 +4,40 @@ import { updateGroup, createEmptyGroup } from "../data/group-data";
 import { useState} from "react";
 import { getFriends } from "../data/friend-data";
 import Select from 'react-select'
+import type { MultiValue } from "react-select";
 import type { Member } from "../data/group-data";
 
 import "./create-group.css";
+
+type SelectOption = { label: string; value: string };
+
+function parseMembers(membersString: FormDataEntryValue | null) {
+  if (typeof membersString !== "string") {
+    return [];
+  }
+
+  let parsedMembers: unknown;
+  try {
+    parsedMembers = JSON.parse(membersString);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsedMembers)) {
+    return [];
+  }
+
+  return parsedMembers
+    .filter(
+      (item): item is SelectOption =>
+        item &&
+        typeof item.value === "string" &&
+        typeof item.label === "string"
+    )
+    .map((item) => ({
+      uniqueId: item.value,
+      name: item.label,
+    }));
+}
 
 export async function action({
   params,
@@ -20,26 +51,26 @@ export async function action({
         return;
     }
     const group = await createEmptyGroup();
-    const updates = Object.fromEntries(formData);
-
-    let members = group.members ?? [];
-    const membersString = updates.membersString as string;
-    try {
-      const parsedMembers = JSON.parse(membersString);
-      const newMembers: Member[] = parsedMembers.map((item: any) => ({
-        uniqueId: item.value,
-        name: item.label,
-      }));
-      members = [...members, ...newMembers];
-    } catch (error) {
-      console.error("Error parsing members:", error);
-    }
+    const selectedMembers = parseMembers(formData.get("membersString"));
+    const existingMembers = group.members ?? [];
+    const selectedMemberIds = new Set(selectedMembers.map((member) => member.uniqueId));
+    const members: Member[] = [
+      ...existingMembers.filter((member) => !selectedMemberIds.has(member.uniqueId)),
+      ...selectedMembers,
+    ];
 
     if(!group.uniqueId)
     {
       return;
     }
-    await updateGroup(group.uniqueId, updates, members);
+    await updateGroup(
+      group.uniqueId,
+      {
+        name: formData.get("name")?.toString() ?? "",
+        description: formData.get("description")?.toString() ?? "",
+      },
+      members
+    );
     return redirect(`/groups/${group.uniqueId}`);
 }
 
@@ -52,100 +83,81 @@ export default function CreateGroup({
   loaderData,
 }: Route.ComponentProps) {
   const navigate = useNavigate();
+  const [members, setMembers] = useState<SelectOption[]>([]);
+  const friendOptions = loaderData.friends
+    .map((friend) => ({ value: friend.uniqueId ?? "", label: friend.name }))
+    .filter((option) => option.value && option.label);
 
-  const [members, setMembers] = useState<any>([]);
-
-  const [selectedFriend, setSelectedFriend] = useState(null);
-
-
-  const handleFriendChange = (option: any) => {
-    setSelectedFriend(option);
-  };
-
-  const handleAddMember = () => {
-    if(!selectedFriend)
-    {
-      return;
-    }
-    
-    if(members.includes(selectedFriend)){
-      return;
-    }
-    setMembers([...members, selectedFriend]);
-  }
-
-  const handleDelete = (indexToDelete: number) => {
-    setMembers(members.filter((_: any, index: number) => index !== indexToDelete));
+  const handleMembersChange = (nextValue: MultiValue<SelectOption>) => {
+    setMembers(Array.from(nextValue));
   };
 
     return (
-    <Form className="group-form" method="post">
-      <h2>Display</h2>
-      <p>
-        <span>Name</span>
-        <input
-          aria-label="Name"
-          defaultValue="New Group"
-          name="name"
-          placeholder="Name"
-          type="text"
-        />
-      </p>
-      <p>
-        <span>Description</span>
-        <input
-          aria-label="Description"
-          defaultValue=""
-          name="description"
-          placeholder="Description"
-          type="text"
-        />
-      </p>
-      <div id="group-member">
-        <label>
-          <h2>Group members</h2>
-          <div className="group-member-list-container">
-            <div className="group-member-container">
-              <div className="group-member-item">You</div>
-            </div>
-            {
-              members.map((member: any, index: number) => (
-                <div className="group-member-container" key={index}>
-                  <div className="group-member-item group-new-member">{member.label}</div>
-                  <div
-                  id="delete-member"
-                  className="group-member-item delete-group-member-button"
-                  onClick={ ()=>handleDelete(index) }
-                  >Delete</div>
-                </div>
-            ))}
+    <Form className="group-form product-form" method="post">
+      <div className="form-header">
+        <p className="form-eyebrow">Group setup</p>
+        <h1>Create group</h1>
+      </div>
 
-            <div className="group-member-add">
-              <div>
-                <Select 
-                  options={loaderData.friends.map((friend: any) => ({value: friend.uniqueId, label: friend.name}))} 
-                  classNamePrefix="rs"
-                  onChange={handleFriendChange}
-                />
-              </div>
-              <br/>
-              <div className="group-member-item add-group-member-button" id="add-member-button" 
-              onClick={handleAddMember}
-              >Add member</div>
-            </div>
-            <input type="hidden" name="membersString" value={JSON.stringify(members)} />
+      <section className="form-section">
+        <div className="form-section-copy">
+          <h2>Details</h2>
+          <p>Name the shared space and add a short note if it helps.</p>
+        </div>
+        <div className="form-fields">
+          <label className="form-field">
+            <span>Name</span>
+            <input
+              aria-label="Name"
+              name="name"
+              placeholder="Trip to Tokyo"
+              required
+              type="text"
+            />
+          </label>
+          <label className="form-field">
+            <span>Description</span>
+            <input
+              aria-label="Description"
+              name="description"
+              placeholder="Optional description"
+              type="text"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="form-section">
+        <div className="form-section-copy">
+          <h2>Members</h2>
+          <p>You are included automatically. Select friends to add them now.</p>
+        </div>
+        <div className="form-fields">
+          <div className="member-included">
+            <span>You</span>
+            <small>Included</small>
           </div>
-        </label>
-      </div>
-      <div id="last-element">
+          <Select<SelectOption, true>
+            className="group-member-select"
+            classNamePrefix="rs"
+            closeMenuOnSelect={false}
+            isClearable={false}
+            isMulti
+            onChange={handleMembersChange}
+            options={friendOptions}
+            placeholder="Select friends"
+            value={members}
+          />
+          <input type="hidden" name="membersString" value={JSON.stringify(members)} />
+        </div>
+      </section>
 
-      </div>
-      <p>
-        <button type="submit">Save</button>
+      <div className="form-actions">
+        <button type="submit">Create group</button>
         <button onClick={() => navigate(-1)} type="button">
-            Cancel
+          Cancel
         </button>
-      </p>
+      </div>
     </Form>
   );
 }

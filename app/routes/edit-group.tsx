@@ -173,30 +173,48 @@ export default function EditGroup({
   };
 
   return (
-    <Form key={group.uniqueId} method="post" className="group-form">
-      <p>
-        <span>Name</span>
-        <input
-          aria-label="Name"
-          defaultValue={group.name}
-          name="name"
-          placeholder="Name"
-          type="text"
-        />
-      </p>
-      <p>
-        <span>Description</span>
-        <input
-          aria-label="Description"
-          defaultValue={group.description}
-          name="description"
-          placeholder="Description"
-          type="text"
-        />
-      </p>
-      <div id="group-member">
-        <h2>Group members</h2>
-        <div className="group-member-list-container">
+    <Form key={group.uniqueId} method="post" className="group-form product-form">
+      <div className="form-header">
+        <p className="form-eyebrow">Group settings</p>
+        <h1>Edit group</h1>
+      </div>
+
+      <section className="form-section">
+        <div className="form-section-copy">
+          <h2>Details</h2>
+          <p>Update the group name and description shown to members.</p>
+        </div>
+        <div className="form-fields">
+          <label className="form-field">
+            <span>Name</span>
+            <input
+              aria-label="Name"
+              defaultValue={group.name}
+              name="name"
+              placeholder="Group name"
+              required
+              type="text"
+            />
+          </label>
+          <label className="form-field">
+            <span>Description</span>
+            <input
+              aria-label="Description"
+              defaultValue={group.description}
+              name="description"
+              placeholder="Optional description"
+              type="text"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="form-section">
+        <div className="form-section-copy">
+          <h2>Members</h2>
+          <p>Add or remove friends. Members used in payments stay locked.</p>
+        </div>
+        <div className="form-fields">
           <Select<SelectOption, true>
             className="group-member-select"
             classNamePrefix="rs"
@@ -211,14 +229,14 @@ export default function EditGroup({
           {memberError ? <p className="field-error">{memberError}</p> : null}
           <input type="hidden" name="membersString" value={JSON.stringify(members)} />
         </div>
-      </div>
+      </section>
       <input type="hidden" name="uniqueId" value={group.uniqueId}></input>
-      <p>
+      <div className="form-actions">
         <button type="submit">Save</button>
         <button onClick={() => navigate(-1)} type="button">
           Cancel
         </button>
-      </p>
+      </div>
     </Form>
   );
 }
