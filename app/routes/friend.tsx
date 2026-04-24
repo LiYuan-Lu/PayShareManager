@@ -3,6 +3,7 @@ import { Form, redirect, useActionData } from "react-router";
 import type { FriendMutation } from "../data/friend-data";
 
 import { deleteFriend, getFriend, getFriendUsage, updateFriend } from "../data/friend-data";
+import { requireUserId } from "../data/auth.server";
 import type { Route } from "./+types/friend";
 
 type FriendActionData = {
@@ -16,12 +17,13 @@ export async function action({
     if(!params.uniqueId) {
         throw new Response("Not Found", { status: 404 });
     }
+    const userId = await requireUserId(request);
     const formData = await request.formData();
     const intent = formData.get("intent")?.toString();
 
     if (intent === "delete") {
       try {
-        await deleteFriend(params.uniqueId);
+        await deleteFriend(userId, params.uniqueId);
       } catch (error) {
         return {
           error: error instanceof Error
@@ -36,19 +38,20 @@ export async function action({
         name: formData.get("name")?.toString() ?? "",
         email: ""
     };
-    await updateFriend(params.uniqueId, updates);
+    await updateFriend(userId, params.uniqueId, updates);
     return redirect(`/friends/${params.uniqueId}`);
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ params, request }: Route.LoaderArgs) {
   if (!params.uniqueId) {
     throw new Response("Not Found", { status: 404 });
   }
-  const friend = await getFriend(params.uniqueId);
+  const userId = await requireUserId(request);
+  const friend = await getFriend(userId, params.uniqueId);
   if (!friend) {
     throw new Response("Not Found", { status: 404 });
   }
-  const usage = await getFriendUsage(params.uniqueId);
+  const usage = await getFriendUsage(userId, params.uniqueId);
   return { friend, usage };
 }
 

@@ -3,23 +3,25 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useRef, type FormEvent } from "react";
 
 import { getGroup, getMember, getPayment, updatePayment } from "../data/group-data";
+import { requireUserId } from "../data/auth.server";
 import type { Member, Payment, PaymentShare } from "../data/group-data";
 import PaymentFormFields, { type PaymentFormFieldsHandle } from "../components/payment-form-fields";
 
 import "./create-group.css";
 
-export async function loader({ params }: LoaderFunctionArgs) {
+export async function loader({ params, request }: LoaderFunctionArgs) {
   if (!params.uniqueId || !params.paymentId) {
     throw new Response("Not Found", { status: 404 });
   }
 
+  const userId = await requireUserId(request);
   const paymentId = Number(params.paymentId);
-  const group = await getGroup(params.uniqueId);
+  const group = await getGroup(userId, params.uniqueId);
   if (!group) {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const payment = await getPayment(params.uniqueId, paymentId);
+  const payment = await getPayment(userId, params.uniqueId, paymentId);
   return { group, payment, paymentId };
 }
 
@@ -28,6 +30,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
     throw new Response("Not Found", { status: 404 });
   }
 
+  const userId = await requireUserId(request);
   const paymentId = Number(params.paymentId);
   const formData = await request.formData();
   const splitModeRaw = formData.get("splitMode");
@@ -41,7 +44,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
   );
 
   for (const memberId of uniqueShareMemberIds) {
-    const memberData = await getMember(params.uniqueId, memberId);
+    const memberData = await getMember(userId, params.uniqueId, memberId);
     members.push(memberData);
     const shareUnitsRaw = formData.get(`shareUnits:${memberId}`);
     const shareUnits = Number(shareUnitsRaw ?? 1);
@@ -59,7 +62,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
     throw new Response("Bad Request", { status: 400 });
   }
 
-  const payer = await getMember(params.uniqueId, payerId);
+  const payer = await getMember(userId, params.uniqueId, payerId);
   const createdAtRaw = formData.get("createdAt");
   const createdAt =
     typeof createdAtRaw === "string" && createdAtRaw
@@ -76,7 +79,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
     createdAt,
   };
 
-  await updatePayment(params.uniqueId, paymentId, payment);
+  await updatePayment(userId, params.uniqueId, paymentId, payment);
   return redirect(`/groups/${params.uniqueId}`);
 }
 

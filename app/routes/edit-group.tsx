@@ -11,6 +11,7 @@ import {
   type Member,
 } from "../data/group-data";
 import { getFriends } from "../data/friend-data";
+import { requireUserId } from "../data/auth.server";
 import "./create-group.css";
 
 type SelectOption = { label: string; value: string };
@@ -65,7 +66,8 @@ export async function action({
     throw new Response("Not Found", { status: 404 });
   }
 
-  const group = await getGroup(params.uniqueId);
+  const userId = await requireUserId(request);
+  const group = await getGroup(userId, params.uniqueId);
   if (!group) {
     throw new Response("Not Found", { status: 404 });
   }
@@ -88,6 +90,7 @@ export async function action({
   }
 
   await updateGroup(
+    userId,
     params.uniqueId,
     {
       name: formData.get("name")?.toString() ?? "",
@@ -98,13 +101,14 @@ export async function action({
   return redirect(`/groups/${params.uniqueId}`);
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
-  const group = await getGroup(params.uniqueId);
+export async function loader({ params, request }: Route.LoaderArgs) {
+  const userId = await requireUserId(request);
+  const group = await getGroup(userId, params.uniqueId);
   if (!group) {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const friends = await getFriends();
+  const friends = await getFriends(userId);
   return {
     blockedMemberIds: Array.from(getGroupPaymentMemberIds(group)),
     friends,

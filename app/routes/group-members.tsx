@@ -2,16 +2,18 @@ import { Form } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 
 import { getGroup } from "../data/group-data";
+import { requireUserId } from "../data/auth.server";
 import type { Member } from "../data/group-data";
 
 import "./create-group.css";
 
-export async function loader({ params }: LoaderFunctionArgs) {
+export async function loader({ params, request }: LoaderFunctionArgs) {
   if (!params.uniqueId) {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const group = await getGroup(params.uniqueId);
+  const userId = await requireUserId(request);
+  const group = await getGroup(userId, params.uniqueId);
   if (!group) {
     throw new Response("Not Found", { status: 404 });
   }

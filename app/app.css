@@ -451,6 +451,43 @@ form[action$="destroy"] button {
   transform: translateY(-50%);
 }
 
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-user span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.sidebar-user button {
+  min-height: 2rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.82rem;
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.sidebar-user button:hover {
+  background: var(--secondary-hover);
+  border-color: color-mix(in srgb, var(--text-muted) 28%, var(--border));
+  color: var(--text);
+  box-shadow: var(--button-shadow);
+}
+
 i {
   color: var(--text-muted);
 }
@@ -1079,6 +1116,90 @@ p span {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.6rem;
+}
+
+.auth-page {
+  min-height: 100vh;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.auth-card {
+  width: min(100%, 28rem);
+  display: grid;
+  gap: 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 1.4rem;
+}
+
+.auth-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding-bottom: 0.25rem;
+}
+
+.auth-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 14px;
+  box-shadow: var(--button-shadow);
+}
+
+.auth-eyebrow {
+  margin: 0 0 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-header h1 {
+  margin: 0;
+  font-size: 1.55rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.auth-field span {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.auth-field input {
+  width: 100%;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 82%, var(--surface-soft));
+}
+
+.auth-card button {
+  width: 100%;
+}
+
+.auth-switch {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.auth-switch a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
 }
 
 .share-units-list p span {

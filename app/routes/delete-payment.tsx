@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import { deletePayment } from "../data/group-data";
+import { requireUserId } from "../data/auth.server";
 import type { Route } from "./+types/delete-payment";
 
 export default function DeletePaymentRoute() {
@@ -12,9 +13,10 @@ export async function action({ params, request }: Route.ActionArgs) {
     return;
   }
 
+  const userId = await requireUserId(request);
   const paymentId = Number(params.paymentId);
 
-  deletePayment(params.uniqueId, paymentId);
+  await deletePayment(userId, params.uniqueId, paymentId);
 
   return redirect(`/groups/${params.uniqueId}`);
 }

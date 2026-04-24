@@ -39,10 +39,10 @@ async function getRepositories() {
   return repositories;
 }
 
-export async function getGroups(query?: string | null) {
+export async function getGroups(ownerUserId: string, query?: string | null) {
   await new Promise((resolve) => setTimeout(resolve, 500));
   const repository = await getRepositories();
-  let groups = await repository.getGroups();
+  let groups = await repository.getGroups(ownerUserId);
   if (query) {
     groups = matchSorter(groups, query, {
       keys: ["name", "description"],
@@ -51,43 +51,43 @@ export async function getGroups(query?: string | null) {
   return groups.sort(sortBy("name", "createdAt"));
 }
 
-export async function createEmptyGroup() {
+export async function createEmptyGroup(ownerUserId: string) {
   const repository = await getRepositories();
-  return repository.createGroup({ members: [kUser] });
+  return repository.createGroup(ownerUserId, { members: [kUser] });
 }
 
-export async function getGroup(uniqueId: string) {
+export async function getGroup(ownerUserId: string, uniqueId: string) {
   const repository = await getRepositories();
-  const group = await repository.getGroup(uniqueId); 
+  const group = await repository.getGroup(ownerUserId, uniqueId); 
   if (!group) {
     console.log(`No group found for ${uniqueId}`);
   }
   return group;
 }
 
-export async function updateGroup(uniqueId: string, updates: GroupMutation, members?: Member[]) {
+export async function updateGroup(ownerUserId: string, uniqueId: string, updates: GroupMutation, members?: Member[]) {
   const repository = await getRepositories();
-  return repository.updateGroup(uniqueId, updates, members);
+  return repository.updateGroup(ownerUserId, uniqueId, updates, members);
 }
 
-export async function addPayment(uniqueId: string, payment: Payment) {
+export async function addPayment(ownerUserId: string, uniqueId: string, payment: Payment) {
   const paymentToSave: Payment = {
     ...payment,
     createdAt: payment.createdAt ?? new Date().toISOString(),
   };
   paymentToSave.youShouldPay = calculateYouShouldPay(paymentToSave);
   const repository = await getRepositories();
-  await repository.addPayment(uniqueId, paymentToSave);
+  await repository.addPayment(ownerUserId, uniqueId, paymentToSave);
 }
 
-export async function deletePayment(uniqueId: string, paymentId: number) {
+export async function deletePayment(ownerUserId: string, uniqueId: string, paymentId: number) {
   const repository = await getRepositories();
-  await repository.deletePayment(uniqueId, paymentId);
+  await repository.deletePayment(ownerUserId, uniqueId, paymentId);
 }
 
-export async function getPayment(uniqueId: string, paymentId: number) {
+export async function getPayment(ownerUserId: string, uniqueId: string, paymentId: number) {
   const repository = await getRepositories();
-  const group = await repository.getGroup(uniqueId);
+  const group = await repository.getGroup(ownerUserId, uniqueId);
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);
   }
@@ -101,9 +101,9 @@ export async function getPayment(uniqueId: string, paymentId: number) {
   return payment;
 }
 
-export async function updatePayment(uniqueId: string, paymentId: number, payment: Payment) {
+export async function updatePayment(ownerUserId: string, uniqueId: string, paymentId: number, payment: Payment) {
   const repository = await getRepositories();
-  const group = await repository.getGroup(uniqueId);
+  const group = await repository.getGroup(ownerUserId, uniqueId);
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);
   }
@@ -122,17 +122,17 @@ export async function updatePayment(uniqueId: string, paymentId: number, payment
     createdAt: payment.createdAt ?? existingPayment.createdAt ?? new Date().toISOString(),
   };
   updatedPayment.youShouldPay = calculateYouShouldPay(updatedPayment);
-  return repository.updatePayment(uniqueId, paymentId, updatedPayment);
+  return repository.updatePayment(ownerUserId, uniqueId, paymentId, updatedPayment);
 }
 
-export async function deleteGroup(uniqueId: string) {
+export async function deleteGroup(ownerUserId: string, uniqueId: string) {
   const repository = await getRepositories();
-  await repository.deleteGroup(uniqueId);
+  await repository.deleteGroup(ownerUserId, uniqueId);
 }
 
-export async function getMember(uniqueId: string, memberId: string) {
+export async function getMember(ownerUserId: string, uniqueId: string, memberId: string) {
   const repository = await getRepositories();
-  const group = await repository.getGroup(uniqueId);
+  const group = await repository.getGroup(ownerUserId, uniqueId);
   if (!group) {
     throw new Error(`No group found for ${uniqueId}`);
   }

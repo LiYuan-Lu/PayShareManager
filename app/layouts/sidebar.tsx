@@ -8,6 +8,7 @@ import {
 
 import { getFriends } from "../data/friend-data";
 import { getGroups } from "../data/group-data";
+import { requireUser } from "../data/auth.server";
 import type { Route } from "./+types/sidebar";
 import { useEffect, useState } from "react";
 
@@ -37,15 +38,16 @@ export async function loader({
 }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
-  const friends = await getFriends();
-  const groups = await getGroups();
-  return { friends, q, groups };
+  const user = await requireUser(request);
+  const friends = await getFriends(user.uniqueId);
+  const groups = await getGroups(user.uniqueId);
+  return { friends, q, groups, user };
 }
 
 export default function SidebarLayout({
   loaderData,
 }: Route.ComponentProps) {
-  const { friends, q, groups } = loaderData;
+  const { friends, q, groups, user } = loaderData;
   const navigation = useNavigation();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [groupsOpen, setGroupsOpen] = useState(true);
@@ -228,6 +230,12 @@ export default function SidebarLayout({
             <img alt="" className="nav-section-icon" src="/icons/app.svg" />
             About
           </NavLink>
+          <div className="sidebar-user">
+            <span>{user.name}</span>
+            <Form action="/logout" method="post">
+              <button type="submit">Sign out</button>
+            </Form>
+          </div>
         </div>
       </div>
       <div

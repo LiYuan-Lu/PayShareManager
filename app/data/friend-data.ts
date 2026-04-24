@@ -24,10 +24,10 @@ async function getRepositories() {
   return repositories;
 }
 
-export async function getFriends(query?: string | null) {
+export async function getFriends(ownerUserId: string, query?: string | null) {
   await new Promise((resolve) => setTimeout(resolve, 500));
   const repository = await getRepositories();
-  let friends = await repository.getFriends();
+  let friends = await repository.getFriends(ownerUserId);
   if (query) {
     friends = matchSorter(friends, query, {
       keys: ["name", "description"],
@@ -36,40 +36,40 @@ export async function getFriends(query?: string | null) {
   return friends.sort(sortBy("name", "createdAt"));
 }
 
-export async function createEmptyFriend() {
+export async function createEmptyFriend(ownerUserId: string) {
   const repository = await getRepositories();
-  return repository.createFriend({name: "", email: ""});
+  return repository.createFriend(ownerUserId, {name: "", email: ""});
 }
 
-export async function createFriend(values: FriendMutation) {
+export async function createFriend(ownerUserId: string, values: FriendMutation) {
   const repository = await getRepositories();
-  return repository.createFriend(values);
+  return repository.createFriend(ownerUserId, values);
 }
 
-export async function getFriend(uniqueId: string) {
+export async function getFriend(ownerUserId: string, uniqueId: string) {
   const repository = await getRepositories();
-  const friend = await repository.getFriend(uniqueId); 
+  const friend = await repository.getFriend(ownerUserId, uniqueId); 
   if (!friend) {
     console.log(`No friend found for ${uniqueId}`);
   }
   return friend;
 }
 
-export async function updateFriend(uniqueId: string, updates: FriendMutation) {
+export async function updateFriend(ownerUserId: string, uniqueId: string, updates: FriendMutation) {
   const repository = await getRepositories();
-  return repository.updateFriend(uniqueId, updates);
+  return repository.updateFriend(ownerUserId, uniqueId, updates);
 }
 
-export async function deleteFriend(uniqueId: string) {
+export async function deleteFriend(ownerUserId: string, uniqueId: string) {
   const repository = await getRepositories();
-  const usage = await repository.getFriendUsage(uniqueId);
+  const usage = await repository.getFriendUsage(ownerUserId, uniqueId);
   if (usage.groupCount > 0 || usage.paymentCount > 0) {
     throw new Error("This friend is already used in groups or payments and cannot be deleted.");
   }
-  await repository.deleteFriend(uniqueId);
+  await repository.deleteFriend(ownerUserId, uniqueId);
 }
 
-export async function getFriendUsage(uniqueId: string) {
+export async function getFriendUsage(ownerUserId: string, uniqueId: string) {
   const repository = await getRepositories();
-  return repository.getFriendUsage(uniqueId);
+  return repository.getFriendUsage(ownerUserId, uniqueId);
 }

@@ -2,6 +2,7 @@ import { Form } from "react-router";
 import { useState, useRef, useEffect, type FormEvent } from "react";
 
 import { getGroup} from "../data/group-data";
+import { requireUserId } from "../data/auth.server";
 import {
   calculateGroupSettlement,
   type Member,
@@ -16,12 +17,13 @@ import { createPortal } from "react-dom";
 
 import "./group.css";
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ params, request }: Route.LoaderArgs) {
   if(!params.uniqueId)
   {
     return;
   }
-  const group = await getGroup(params.uniqueId);
+  const userId = await requireUserId(request);
+  const group = await getGroup(userId, params.uniqueId);
   if (!group) {
     throw new Response("Not Found", { status: 404 });
   }

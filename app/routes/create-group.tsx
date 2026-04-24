@@ -3,6 +3,7 @@ import type { Route } from "./+types/create-group";
 import { updateGroup, createEmptyGroup } from "../data/group-data";
 import { useState} from "react";
 import { getFriends } from "../data/friend-data";
+import { requireUserId } from "../data/auth.server";
 import Select from 'react-select'
 import type { MultiValue } from "react-select";
 import type { Member } from "../data/group-data";
@@ -43,6 +44,7 @@ export async function action({
   params,
   request,
 }: Route.ActionArgs) {
+    const userId = await requireUserId(request);
     const formData = await request.formData();
 
     const name = formData.get('name');
@@ -50,7 +52,7 @@ export async function action({
     {
         return;
     }
-    const group = await createEmptyGroup();
+    const group = await createEmptyGroup(userId);
     const selectedMembers = parseMembers(formData.get("membersString"));
     const existingMembers = group.members ?? [];
     const selectedMemberIds = new Set(selectedMembers.map((member) => member.uniqueId));
@@ -64,6 +66,7 @@ export async function action({
       return;
     }
     await updateGroup(
+      userId,
       group.uniqueId,
       {
         name: formData.get("name")?.toString() ?? "",
@@ -74,8 +77,9 @@ export async function action({
     return redirect(`/groups/${group.uniqueId}`);
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
-  const friends = await getFriends();
+export async function loader({ request }: Route.LoaderArgs) {
+  const userId = await requireUserId(request);
+  const friends = await getFriends(userId);
   return { friends };
 }
 

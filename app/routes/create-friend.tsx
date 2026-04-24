@@ -1,6 +1,7 @@
 import { Form, redirect, useNavigate } from "react-router";
 import type { Route } from "./+types/create-friend";
 import { createFriend } from "../data/friend-data";
+import { requireUserId } from "../data/auth.server";
 
 import "./create-group.css";
 
@@ -8,6 +9,7 @@ export async function action({
   params,
   request,
 }: Route.ActionArgs) {
+    const userId = await requireUserId(request);
     const formData = await request.formData();
 
     const values = {
@@ -18,7 +20,7 @@ export async function action({
       return null;
     }
 
-    const friend = await createFriend(values);
+    const friend = await createFriend(userId, values);
     return redirect(`/friends/${friend.uniqueId}`);
 }
 

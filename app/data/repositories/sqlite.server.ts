@@ -14,8 +14,17 @@ import type {
 } from "../group-data";
 import type { DataRepositories } from "./types";
 
+type DbUser = {
+  unique_id: string;
+  email: string;
+  name: string;
+  password_hash: string;
+  created_at: string;
+};
+
 type DbFriend = {
   unique_id: string;
+  owner_user_id: string;
   name: string;
   email: string;
   created_at: string;
@@ -23,6 +32,7 @@ type DbFriend = {
 
 type DbGroup = {
   unique_id: string;
+  owner_user_id: string;
   name: string | null;
   description: string | null;
   favorite: number;
@@ -53,6 +63,9 @@ type DbPaymentShare = {
 };
 
 const kUser: Member = { uniqueId: "0", name: "You" };
+const demoUserId = "demo-user";
+const demoPasswordHash =
+  "scrypt:demo-auth-salt-2026:a2ef900b153f1a7ab22894746d7027b6d5e9c92c0bef7f50bfaf76c04aca6d47b565840fe690dd05b2c6389e6936c53025660885dfe14bce9d601790c008d0c5";
 const defaultDbPath = path.join(process.cwd(), "data", "payshare.db");
 const dbPath = process.env.PAYSHARE_DB_PATH || defaultDbPath;
 let db: Database.Database | null = null;
@@ -72,20 +85,40 @@ function getDb() {
 
 function migrate(database: Database.Database) {
   database.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      unique_id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      session_id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(unique_id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS friends (
       unique_id TEXT PRIMARY KEY,
+      owner_user_id TEXT NOT NULL DEFAULT '${demoUserId}',
       name TEXT NOT NULL,
       email TEXT NOT NULL,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (owner_user_id) REFERENCES users(unique_id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS groups (
       unique_id TEXT PRIMARY KEY,
+      owner_user_id TEXT NOT NULL DEFAULT '${demoUserId}',
       name TEXT,
       description TEXT,
       favorite INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
-      payment_next_id INTEGER NOT NULL DEFAULT 0
+      payment_next_id INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (owner_user_id) REFERENCES users(unique_id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS group_members (
@@ -122,9 +155,39 @@ function migrate(database: Database.Database) {
       FOREIGN KEY (group_id, payment_id) REFERENCES payments(group_id, payment_id) ON DELETE CASCADE
     );
   `);
+
+  ensureColumn(database, "friends", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
+  ensureColumn(database, "groups", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
+  database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date().toISOString());
+}
+
+function ensureColumn(
+  database: Database.Database,
+  tableName: string,
+  columnName: string,
+  definition: string
+) {
+  const columns = database.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+  if (!columns.some((column) => column.name === columnName)) {
+    database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+  }
 }
 
 function seed(database: Database.Database) {
+  database.prepare(`
+    INSERT OR IGNORE INTO users (unique_id, email, name, password_hash, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(
+    demoUserId,
+    "demo@payshare.local",
+    "Demo User",
+    demoPasswordHash,
+    new Date().toISOString()
+  );
+  database
+    .prepare("UPDATE users SET password_hash = ? WHERE unique_id = ? AND password_hash = ?")
+    .run(demoPasswordHash, demoUserId, "local-dev-password");
+
   const friendCount = database.prepare("SELECT COUNT(*) AS count FROM friends").get() as {
     count: number;
   };
@@ -134,8 +197,8 @@ function seed(database: Database.Database) {
 
   if (friendCount.count === 0) {
     const insertFriend = database.prepare(`
-      INSERT INTO friends (unique_id, name, email, created_at)
-      VALUES (@uniqueId, @name, @email, @createdAt)
+      INSERT INTO friends (unique_id, owner_user_id, name, email, created_at)
+      VALUES (@uniqueId, @ownerUserId, @name, @email, @createdAt)
     `);
     [
       { name: "Friend 1", email: "test@test.com" },
@@ -144,6 +207,7 @@ function seed(database: Database.Database) {
     ].forEach((friend) => {
       insertFriend.run({
         uniqueId: randomUUID(),
+        ownerUserId: demoUserId,
         createdAt: new Date().toISOString(),
         ...friend,
       });
@@ -154,11 +218,11 @@ function seed(database: Database.Database) {
     const uniqueId = randomUUID();
     const createdAt = new Date().toISOString();
     database.prepare(`
-      INSERT INTO groups (unique_id, name, description, favorite, created_at, payment_next_id)
-      VALUES (?, ?, ?, 0, ?, 0)
-    `).run(uniqueId, "Group 1", "This is group 1", createdAt);
+      INSERT INTO groups (unique_id, owner_user_id, name, description, favorite, created_at, payment_next_id)
+      VALUES (?, ?, ?, ?, 0, ?, 0)
+    `).run(uniqueId, demoUserId, "Group 1", "This is group 1", createdAt);
 
-    const friends = getFriendsFromDb(database);
+    const friends = getFriendsFromDb(database, demoUserId);
     saveMembers(database, uniqueId, [
       ...friends.map((friend) => ({
         uniqueId: friend.uniqueId ?? "",
@@ -169,10 +233,15 @@ function seed(database: Database.Database) {
   }
 }
 
-function getFriendsFromDb(database: Database.Database) {
+function getFriendsFromDb(database: Database.Database, ownerUserId: string) {
   const rows = database
-    .prepare("SELECT unique_id, name, email, created_at FROM friends ORDER BY name, created_at")
-    .all() as DbFriend[];
+    .prepare(`
+      SELECT unique_id, owner_user_id, name, email, created_at
+      FROM friends
+      WHERE owner_user_id = ?
+      ORDER BY name, created_at
+    `)
+    .all(ownerUserId) as DbFriend[];
 
   return rows.map((row) => ({
     uniqueId: row.unique_id,
@@ -181,7 +250,7 @@ function getFriendsFromDb(database: Database.Database) {
   }));
 }
 
-function getUniqueId(table: "friends" | "groups", column = "unique_id") {
+function getUniqueId(table: "friends" | "groups" | "users" | "sessions", column = "unique_id") {
   const database = getDb();
   let uniqueId = "";
   do {
@@ -328,14 +397,80 @@ function savePayment(database: Database.Database, groupId: string, paymentId: nu
 
 export function getSqliteRepositories(): DataRepositories {
   return {
-    async getFriends() {
-      return getFriendsFromDb(getDb());
+    async getUserById(uniqueId) {
+      const row = getDb()
+        .prepare("SELECT unique_id, email, name, password_hash, created_at FROM users WHERE unique_id = ?")
+        .get(uniqueId) as DbUser | undefined;
+      return row
+        ? { uniqueId: row.unique_id, email: row.email, name: row.name }
+        : null;
     },
 
-    async getFriend(uniqueId) {
+    async getUserByEmail(email) {
       const row = getDb()
-        .prepare("SELECT unique_id, name, email, created_at FROM friends WHERE unique_id = ?")
-        .get(uniqueId) as DbFriend | undefined;
+        .prepare("SELECT unique_id, email, name, password_hash, created_at FROM users WHERE lower(email) = lower(?)")
+        .get(email) as DbUser | undefined;
+      return row
+        ? { uniqueId: row.unique_id, email: row.email, name: row.name }
+        : null;
+    },
+
+    async createUser(values) {
+      const uniqueId = getUniqueId("users");
+      const createdAt = new Date().toISOString();
+      getDb().prepare(`
+        INSERT INTO users (unique_id, email, name, password_hash, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(uniqueId, values.email.toLowerCase(), values.name, values.passwordHash, createdAt);
+      return { uniqueId, email: values.email.toLowerCase(), name: values.name };
+    },
+
+    async getUserPasswordHash(email) {
+      const row = getDb()
+        .prepare("SELECT password_hash FROM users WHERE lower(email) = lower(?)")
+        .get(email) as { password_hash: string } | undefined;
+      return row?.password_hash ?? null;
+    },
+
+    async createSession(userId, expiresAt) {
+      const sessionId = randomUUID();
+      getDb().prepare(`
+        INSERT INTO sessions (session_id, user_id, expires_at, created_at)
+        VALUES (?, ?, ?, ?)
+      `).run(sessionId, userId, expiresAt, new Date().toISOString());
+      return sessionId;
+    },
+
+    async getSessionUser(sessionId) {
+      const row = getDb()
+        .prepare(`
+          SELECT users.unique_id, users.email, users.name, users.password_hash, users.created_at
+          FROM sessions
+          JOIN users ON users.unique_id = sessions.user_id
+          WHERE sessions.session_id = ? AND sessions.expires_at > ?
+        `)
+        .get(sessionId, new Date().toISOString()) as DbUser | undefined;
+      return row
+        ? { uniqueId: row.unique_id, email: row.email, name: row.name }
+        : null;
+    },
+
+    async deleteSession(sessionId) {
+      getDb().prepare("DELETE FROM sessions WHERE session_id = ?").run(sessionId);
+    },
+
+    async getFriends(ownerUserId) {
+      return getFriendsFromDb(getDb(), ownerUserId);
+    },
+
+    async getFriend(ownerUserId, uniqueId) {
+      const row = getDb()
+        .prepare(`
+          SELECT unique_id, owner_user_id, name, email, created_at
+          FROM friends
+          WHERE owner_user_id = ? AND unique_id = ?
+        `)
+        .get(ownerUserId, uniqueId) as DbFriend | undefined;
       return row
         ? {
             uniqueId: row.unique_id,
@@ -345,18 +480,18 @@ export function getSqliteRepositories(): DataRepositories {
         : null;
     },
 
-    async createFriend(values) {
+    async createFriend(ownerUserId, values) {
       const uniqueId = getUniqueId("friends");
       const createdAt = new Date().toISOString();
       getDb().prepare(`
-        INSERT INTO friends (unique_id, name, email, created_at)
-        VALUES (?, ?, ?, ?)
-      `).run(uniqueId, values.name, values.email, createdAt);
+        INSERT INTO friends (unique_id, owner_user_id, name, email, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(uniqueId, ownerUserId, values.name, values.email, createdAt);
       return { ...values, uniqueId };
     },
 
-    async updateFriend(uniqueId, values) {
-      const existing = await this.getFriend(uniqueId);
+    async updateFriend(ownerUserId, uniqueId, values) {
+      const existing = await this.getFriend(ownerUserId, uniqueId);
       if (!existing) {
         throw new Error(`No friend found for ${uniqueId}`);
       }
@@ -365,31 +500,58 @@ export function getSqliteRepositories(): DataRepositories {
         database.prepare(`
           UPDATE friends
           SET name = ?, email = ?
-          WHERE unique_id = ?
-        `).run(values.name, values.email, uniqueId);
-        database.prepare("UPDATE group_members SET name = ? WHERE member_id = ?").run(values.name, uniqueId);
-        database.prepare("UPDATE payments SET payer_name = ? WHERE payer_id = ?").run(values.name, uniqueId);
-        database.prepare("UPDATE payment_shares SET member_name = ? WHERE member_id = ?").run(values.name, uniqueId);
+          WHERE owner_user_id = ? AND unique_id = ?
+        `).run(values.name, values.email, ownerUserId, uniqueId);
+        database.prepare(`
+          UPDATE group_members
+          SET name = ?
+          WHERE member_id = ? AND group_id IN (SELECT unique_id FROM groups WHERE owner_user_id = ?)
+        `).run(values.name, uniqueId, ownerUserId);
+        database.prepare(`
+          UPDATE payments
+          SET payer_name = ?
+          WHERE payer_id = ? AND group_id IN (SELECT unique_id FROM groups WHERE owner_user_id = ?)
+        `).run(values.name, uniqueId, ownerUserId);
+        database.prepare(`
+          UPDATE payment_shares
+          SET member_name = ?
+          WHERE member_id = ? AND group_id IN (SELECT unique_id FROM groups WHERE owner_user_id = ?)
+        `).run(values.name, uniqueId, ownerUserId);
       });
       transaction();
       return { ...existing, ...values, uniqueId };
     },
 
-    async deleteFriend(uniqueId) {
-      getDb().prepare("DELETE FROM friends WHERE unique_id = ?").run(uniqueId);
+    async deleteFriend(ownerUserId, uniqueId) {
+      getDb().prepare("DELETE FROM friends WHERE owner_user_id = ? AND unique_id = ?").run(ownerUserId, uniqueId);
     },
 
-    async getFriendUsage(uniqueId) {
+    async getFriendUsage(ownerUserId, uniqueId) {
       const database = getDb();
       const groupUsage = database
-        .prepare("SELECT COUNT(*) AS count FROM group_members WHERE member_id = ?")
-        .get(uniqueId) as { count: number };
+        .prepare(`
+          SELECT COUNT(*) AS count
+          FROM group_members
+          JOIN groups ON groups.unique_id = group_members.group_id
+          WHERE groups.owner_user_id = ? AND group_members.member_id = ?
+        `)
+        .get(ownerUserId, uniqueId) as { count: number };
       const payerUsage = database
-        .prepare("SELECT COUNT(*) AS count FROM payments WHERE payer_id = ?")
-        .get(uniqueId) as { count: number };
+        .prepare(`
+          SELECT COUNT(*) AS count
+          FROM payments
+          JOIN groups ON groups.unique_id = payments.group_id
+          WHERE groups.owner_user_id = ? AND payments.payer_id = ?
+        `)
+        .get(ownerUserId, uniqueId) as { count: number };
       const shareUsage = database
-        .prepare("SELECT COUNT(*) AS count FROM payment_shares WHERE member_id = ?")
-        .get(uniqueId) as { count: number };
+        .prepare(`
+          SELECT COUNT(*) AS count
+          FROM payment_shares
+          JOIN groups ON groups.unique_id = payment_shares.group_id
+          WHERE groups.owner_user_id = ? AND payment_shares.member_id = ?
+        `)
+        .get(ownerUserId, uniqueId) as { count: number };
 
       return {
         groupCount: groupUsage.count,
@@ -397,36 +559,38 @@ export function getSqliteRepositories(): DataRepositories {
       };
     },
 
-    async getGroups() {
+    async getGroups(ownerUserId) {
       const rows = getDb()
         .prepare(`
-          SELECT unique_id, name, description, favorite, created_at, payment_next_id
+          SELECT unique_id, owner_user_id, name, description, favorite, created_at, payment_next_id
           FROM groups
+          WHERE owner_user_id = ?
           ORDER BY name, created_at
         `)
-        .all() as DbGroup[];
+        .all(ownerUserId) as DbGroup[];
       return rows.map(mapGroup);
     },
 
-    async getGroup(uniqueId) {
+    async getGroup(ownerUserId, uniqueId) {
       const row = getDb()
         .prepare(`
-          SELECT unique_id, name, description, favorite, created_at, payment_next_id
+          SELECT unique_id, owner_user_id, name, description, favorite, created_at, payment_next_id
           FROM groups
-          WHERE unique_id = ?
+          WHERE owner_user_id = ? AND unique_id = ?
         `)
-        .get(uniqueId) as DbGroup | undefined;
+        .get(ownerUserId, uniqueId) as DbGroup | undefined;
       return row ? mapGroup(row) : null;
     },
 
-    async createGroup(values) {
+    async createGroup(ownerUserId, values) {
       const uniqueId = getUniqueId("groups");
       const createdAt = new Date().toISOString();
       getDb().prepare(`
-        INSERT INTO groups (unique_id, name, description, favorite, created_at, payment_next_id)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO groups (unique_id, owner_user_id, name, description, favorite, created_at, payment_next_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(
         uniqueId,
+        ownerUserId,
         values.name ?? null,
         values.description ?? null,
         values.favorite ? 1 : 0,
@@ -434,11 +598,11 @@ export function getSqliteRepositories(): DataRepositories {
         values.paymentNextId ?? 0
       );
       saveMembers(getDb(), uniqueId, values.members ?? []);
-      return (await this.getGroup(uniqueId)) as GroupRecord;
+      return (await this.getGroup(ownerUserId, uniqueId)) as GroupRecord;
     },
 
-    async updateGroup(uniqueId, values, members) {
-      const existing = await this.getGroup(uniqueId);
+    async updateGroup(ownerUserId, uniqueId, values, members) {
+      const existing = await this.getGroup(ownerUserId, uniqueId);
       if (!existing) {
         throw new Error(`No group found for ${uniqueId}`);
       }
@@ -446,12 +610,13 @@ export function getSqliteRepositories(): DataRepositories {
       getDb().prepare(`
         UPDATE groups
         SET name = ?, description = ?, favorite = ?, payment_next_id = ?
-        WHERE unique_id = ?
+        WHERE owner_user_id = ? AND unique_id = ?
       `).run(
         values.name ?? existing.name ?? null,
         values.description ?? existing.description ?? null,
         values.favorite ?? existing.favorite ? 1 : 0,
         values.paymentNextId ?? existing.paymentNextId ?? 0,
+        ownerUserId,
         uniqueId
       );
 
@@ -459,16 +624,16 @@ export function getSqliteRepositories(): DataRepositories {
         saveMembers(getDb(), uniqueId, members);
       }
 
-      return (await this.getGroup(uniqueId)) as GroupRecord;
+      return (await this.getGroup(ownerUserId, uniqueId)) as GroupRecord;
     },
 
-    async deleteGroup(uniqueId) {
-      getDb().prepare("DELETE FROM groups WHERE unique_id = ?").run(uniqueId);
+    async deleteGroup(ownerUserId, uniqueId) {
+      getDb().prepare("DELETE FROM groups WHERE owner_user_id = ? AND unique_id = ?").run(ownerUserId, uniqueId);
     },
 
-    async addPayment(uniqueId, payment) {
+    async addPayment(ownerUserId, uniqueId, payment) {
       const database = getDb();
-      const existing = await this.getGroup(uniqueId);
+      const existing = await this.getGroup(ownerUserId, uniqueId);
       if (!existing) {
         throw new Error(`No group found for ${uniqueId}`);
       }
@@ -483,19 +648,23 @@ export function getSqliteRepositories(): DataRepositories {
       transaction();
     },
 
-    async deletePayment(uniqueId, paymentId) {
+    async deletePayment(ownerUserId, uniqueId, paymentId) {
+      const existing = await this.getGroup(ownerUserId, uniqueId);
+      if (!existing) {
+        throw new Error(`No group found for ${uniqueId}`);
+      }
       getDb()
         .prepare("DELETE FROM payments WHERE group_id = ? AND payment_id = ?")
         .run(uniqueId, paymentId);
     },
 
-    async updatePayment(uniqueId, paymentId, payment) {
-      const existing = await this.getGroup(uniqueId);
+    async updatePayment(ownerUserId, uniqueId, paymentId, payment) {
+      const existing = await this.getGroup(ownerUserId, uniqueId);
       if (!existing?.paymentList?.has(paymentId)) {
         throw new Error(`No payment found for ${paymentId}`);
       }
       savePayment(getDb(), uniqueId, paymentId, payment);
-      const updated = await this.getGroup(uniqueId);
+      const updated = await this.getGroup(ownerUserId, uniqueId);
       const updatedPayment = updated?.paymentList?.get(paymentId);
       if (!updatedPayment) {
         throw new Error(`No payment found for ${paymentId}`);

@@ -2,30 +2,47 @@ import type { FriendMutation } from "../friend-data";
 import type { GroupRecord, GroupMutation, Payment } from "../group-data";
 
 export type FriendRepository = {
-  getFriends: () => Promise<FriendMutation[]>;
-  getFriend: (uniqueId: string) => Promise<FriendMutation | null>;
-  createFriend: (values: FriendMutation) => Promise<FriendMutation>;
-  updateFriend: (uniqueId: string, values: FriendMutation) => Promise<FriendMutation>;
-  deleteFriend: (uniqueId: string) => Promise<void>;
-  getFriendUsage: (uniqueId: string) => Promise<FriendUsage>;
+  getFriends: (ownerUserId: string) => Promise<FriendMutation[]>;
+  getFriend: (ownerUserId: string, uniqueId: string) => Promise<FriendMutation | null>;
+  createFriend: (ownerUserId: string, values: FriendMutation) => Promise<FriendMutation>;
+  updateFriend: (ownerUserId: string, uniqueId: string, values: FriendMutation) => Promise<FriendMutation>;
+  deleteFriend: (ownerUserId: string, uniqueId: string) => Promise<void>;
+  getFriendUsage: (ownerUserId: string, uniqueId: string) => Promise<FriendUsage>;
 };
 
 export type GroupRepository = {
-  getGroups: () => Promise<GroupRecord[]>;
-  getGroup: (uniqueId: string) => Promise<GroupRecord | null>;
-  createGroup: (values: GroupMutation) => Promise<GroupRecord>;
+  getGroups: (ownerUserId: string) => Promise<GroupRecord[]>;
+  getGroup: (ownerUserId: string, uniqueId: string) => Promise<GroupRecord | null>;
+  createGroup: (ownerUserId: string, values: GroupMutation) => Promise<GroupRecord>;
   updateGroup: (
+    ownerUserId: string,
     uniqueId: string,
     values: GroupMutation,
     members?: GroupRecord["members"]
   ) => Promise<GroupRecord>;
-  deleteGroup: (uniqueId: string) => Promise<void>;
-  addPayment: (uniqueId: string, payment: Payment) => Promise<void>;
-  deletePayment: (uniqueId: string, paymentId: number) => Promise<void>;
-  updatePayment: (uniqueId: string, paymentId: number, payment: Payment) => Promise<Payment>;
+  deleteGroup: (ownerUserId: string, uniqueId: string) => Promise<void>;
+  addPayment: (ownerUserId: string, uniqueId: string, payment: Payment) => Promise<void>;
+  deletePayment: (ownerUserId: string, uniqueId: string, paymentId: number) => Promise<void>;
+  updatePayment: (ownerUserId: string, uniqueId: string, paymentId: number, payment: Payment) => Promise<Payment>;
 };
 
-export type DataRepositories = FriendRepository & GroupRepository;
+export type UserRecord = {
+  uniqueId: string;
+  email: string;
+  name: string;
+};
+
+export type UserRepository = {
+  getUserById: (uniqueId: string) => Promise<UserRecord | null>;
+  getUserByEmail: (email: string) => Promise<UserRecord | null>;
+  createUser: (values: { email: string; name: string; passwordHash: string }) => Promise<UserRecord>;
+  getUserPasswordHash: (email: string) => Promise<string | null>;
+  createSession: (userId: string, expiresAt: string) => Promise<string>;
+  getSessionUser: (sessionId: string) => Promise<UserRecord | null>;
+  deleteSession: (sessionId: string) => Promise<void>;
+};
+
+export type DataRepositories = FriendRepository & GroupRepository & UserRepository;
 
 export type FriendUsage = {
   groupCount: number;

@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import { addPayment, getMember } from "../data/group-data";
+import { requireUserId } from "../data/auth.server";
 import type { Payment, Member, PaymentShare } from "../data/group-data";
 import type { Route } from "./+types/add-payment";
 
@@ -13,6 +14,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     return;
   }
 
+  const userId = await requireUserId(request);
   const formData = await request.formData();
   const splitModeRaw = formData.get("splitMode");
   const splitMode = splitModeRaw === "shares" ? "shares" : "equal";
@@ -24,7 +26,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     new Set(shareMemberIds.filter((item): item is string => typeof item === "string"))
   );
   for (const memberId of uniqueShareMemberIds) {
-      const memberData = await getMember(params.uniqueId, memberId);
+      const memberData = await getMember(userId, params.uniqueId, memberId);
       members.push(memberData);
     const shareUnitsRaw = formData.get(`shareUnits:${memberId}`);
     const shareUnits = Number(shareUnitsRaw ?? 1);
@@ -38,7 +40,7 @@ export async function action({ params, request }: Route.ActionArgs) {
   }
 
   const payerId = formData.get("payer") as string;
-  const payer = await getMember(params.uniqueId, payerId);
+  const payer = await getMember(userId, params.uniqueId, payerId);
   const createdAtRaw = formData.get("createdAt");
   const createdAt =
     typeof createdAtRaw === "string" && createdAtRaw
@@ -56,7 +58,7 @@ export async function action({ params, request }: Route.ActionArgs) {
   };
 
 
-  await addPayment(params.uniqueId, payment);
+  await addPayment(userId, params.uniqueId, payment);
 
   return redirect(`/groups/${params.uniqueId}`);
 }

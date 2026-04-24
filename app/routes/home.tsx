@@ -1,12 +1,14 @@
 import { Link } from "react-router";
 
+import { requireUserId } from "../data/auth.server";
 import { getFriends } from "../data/friend-data";
 import { getGroups, type GroupRecord } from "../data/group-data";
 import type { Payment } from "../data/settlement";
 import type { Route } from "./+types/home";
 
-export async function loader() {
-  const [groups, friends] = await Promise.all([getGroups(), getFriends()]);
+export async function loader({ request }: Route.LoaderArgs) {
+  const userId = await requireUserId(request);
+  const [groups, friends] = await Promise.all([getGroups(userId), getFriends(userId)]);
   return { groups, friends };
 }
 
