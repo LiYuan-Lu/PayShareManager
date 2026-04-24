@@ -2,13 +2,12 @@ import { Form } from "react-router";
 import { useState, useRef, useEffect, type FormEvent, type JSX } from "react";
 
 import { calculateGroupSettlement, getGroup} from "../data/group-data";
-import type { Member } from "../data/group-data";
 import type { Payment, PaymentList } from "../data/group-data";
 import type { Route } from "./+types/group";
 
 import Modal from "../components/modal";
+import PaymentFormFields, { type PaymentFormFieldsHandle } from "../components/payment-form-fields";
 import { createPortal } from "react-dom";
-import Select from 'react-select'
 
 import "./group.css";
 
@@ -28,26 +27,12 @@ export default function Group({
   loaderData,
 }: { loaderData: { group: any } }) {
   const { group } = loaderData;
-  type SelectOption = { label: string; value: string };
-  type PaymentFormErrors = {
-    cost?: string;
-    payer?: string;
-    shareMember?: string;
-    shareUnits?: string;
-  };
   const defaultPaymentDate = new Date().toISOString().slice(0, 10);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedPayer, setSelectedPayer] = useState<SelectOption | null>(null);
-  const [selectedShareMembers, setSelectedShareMembers] = useState<SelectOption[]>([]);
-  const [shareUnitsMap, setShareUnitsMap] = useState<Record<string, number>>({});
-  const [splitMode, setSplitMode] = useState<"equal" | "shares">("equal");
-  const [paymentFormErrors, setPaymentFormErrors] = useState<PaymentFormErrors>({});
-  const [paymentCostValue, setPaymentCostValue] = useState<number>(0);
 
   const [paymentList, setPaymentList] = useState<PaymentList>();
-  const paymentNameRef = useRef<HTMLInputElement>(null);
-  const paymentCostRef = useRef<HTMLInputElement>(null);
+  const paymentFormRef = useRef<PaymentFormFieldsHandle>(null);
 
   useEffect(() => {
     setModalOpen(false);
@@ -60,27 +45,12 @@ export default function Group({
 
   const handleButtonClick = (msg: String) => {
     setModalOpen(false);
-    setSelectedPayer(null);
-    setSelectedShareMembers([]);
-    setShareUnitsMap({});
-    setSplitMode("equal");
-    setPaymentCostValue(0);
-    setPaymentFormErrors({});
   };
 
   const openModal = () => {
-    setSelectedPayer(null);
-    setSelectedShareMembers([]);
-    setShareUnitsMap({});
-    setSplitMode("equal");
-    setPaymentCostValue(0);
-    setPaymentFormErrors({});
     setModalOpen(true);
   };
 
-  const options: SelectOption[] = group.members.map((member: Member) => {
-    return {label: member.name, value: member.uniqueId};
-  });
   const settlement = calculateGroupSettlement(group);
   const formatPaymentDate = (dateStr?: string) =>
     dateStr ? new Date(dateStr).toLocaleDateString() : "-";
@@ -115,51 +85,8 @@ export default function Group({
     return "payment-summary-neutral";
   };
 
-  const getShareEstimate = (memberId: string) => {
-    const totalCost = Number(paymentCostValue ?? 0);
-    if (!Number.isFinite(totalCost) || totalCost <= 0) {
-      return 0;
-    }
-    const totalShares = selectedShareMembers.reduce(
-      (sum, member) => sum + Math.max(1, Number(shareUnitsMap[member.value] ?? 1)),
-      0
-    );
-    if (totalShares <= 0) {
-      return 0;
-    }
-    const memberShares = Math.max(1, Number(shareUnitsMap[memberId] ?? 1));
-    return (totalCost * memberShares) / totalShares;
-  };
-
-  const validatePaymentForm = () => {
-    const errors: PaymentFormErrors = {};
-    const cost = Number(paymentCostRef.current?.value ?? "");
-
-    if (!Number.isFinite(cost) || cost <= 0) {
-      errors.cost = "Cost must be greater than 0.";
-    }
-    if (!selectedPayer) {
-      errors.payer = "Please select who paid for this payment.";
-    }
-    if (selectedShareMembers.length === 0) {
-      errors.shareMember = "Please select at least one shared member.";
-    }
-    if (
-      splitMode === "shares" &&
-      selectedShareMembers.some((member) => {
-        const units = Number(shareUnitsMap[member.value] ?? 0);
-        return !Number.isFinite(units) || units <= 0 || !Number.isInteger(units);
-      })
-    ) {
-      errors.shareUnits = "Each shared member must have integer shares greater than 0.";
-    }
-
-    setPaymentFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleAddPaymentSubmit = (event: FormEvent<HTMLFormElement>) => {
-    if (!validatePaymentForm()) {
+    if (!paymentFormRef.current?.validate()) {
       event.preventDefault();
     }
   };
@@ -252,149 +179,11 @@ export default function Group({
             >
               <h1>Payment</h1>
               <br/>
-              <p>
-                <span>Name</span>
-                <input
-                  aria-label="Name"
-                  defaultValue="Name"
-                  name="name"
-                  placeholder="Name"
-                  type="text"
-                  ref={paymentNameRef}
-                />
-              </p>
-              <p>
-                <span>Cost</span>
-                <input
-                  aria-label="Cost"
-                  defaultValue={0}
-                  name="cost"
-                  placeholder="Cost"
-                  type="text"
-                  onChange={(event) => setPaymentCostValue(Number(event.target.value))}
-                  ref={paymentCostRef}
-                />
-              </p>
-              {paymentFormErrors.cost ? (
-                <p className="field-error">{paymentFormErrors.cost}</p>
-              ) : null}
-              <p>
-                <span>Date</span>
-                <input
-                  aria-label="Date"
-                  defaultValue={defaultPaymentDate}
-                  name="createdAt"
-                  type="date"
-                />
-              </p>
-              <div>
-                <p>Paid By</p>
-                <Select 
-                  name="payer"
-                  options={options}
-                  classNamePrefix="rs"
-                  value={selectedPayer}
-                  onChange={(option) => {
-                    setSelectedPayer(option as SelectOption | null);
-                    if (paymentFormErrors.payer) {
-                      setPaymentFormErrors((prev) => ({ ...prev, payer: undefined }));
-                    }
-                  }}
-                />
-                {paymentFormErrors.payer ? (
-                  <p className="field-error">{paymentFormErrors.payer}</p>
-                ) : null}
-                <p>Split mode</p>
-                <select
-                  name="splitMode"
-                  onChange={(event) => setSplitMode(event.target.value === "shares" ? "shares" : "equal")}
-                  value={splitMode}
-                >
-                  <option value="equal">Equal</option>
-                  <option value="shares">By Shares</option>
-                </select>
-                <p>Shared By</p>
-                <Select
-                  options={options} 
-                  classNamePrefix="rs"
-                  value={selectedShareMembers}
-                  onChange={(selectedOptions) => {
-                    const nextSelected = (selectedOptions as SelectOption[]) ?? [];
-                    setSelectedShareMembers(nextSelected);
-                    setShareUnitsMap((prev) => {
-                      const nextMap: Record<string, number> = {};
-                      nextSelected.forEach((item) => {
-                        nextMap[item.value] = prev[item.value] ?? 1;
-                      });
-                      return nextMap;
-                    });
-                    if (paymentFormErrors.shareMember) {
-                      setPaymentFormErrors((prev) => ({ ...prev, shareMember: undefined }));
-                    }
-                    if (paymentFormErrors.shareUnits) {
-                      setPaymentFormErrors((prev) => ({ ...prev, shareUnits: undefined }));
-                    }
-                  }}
-                  isMulti
-                />
-                {paymentFormErrors.shareMember ? (
-                  <p className="field-error">{paymentFormErrors.shareMember}</p>
-                ) : null}
-                {splitMode === "shares" && selectedShareMembers.length ? (
-                  <div className="share-units-list">
-                    {selectedShareMembers.map((member) => (
-                      <p key={member.value}>
-                        <span>{member.label} shares</span>
-                        <div className="share-stepper">
-                          <button
-                            className="share-stepper-btn"
-                            onClick={() => {
-                              setShareUnitsMap((prev) => ({
-                                ...prev,
-                                [member.value]: Math.max(1, (prev[member.value] ?? 1) - 1),
-                              }));
-                            }}
-                            type="button"
-                          >
-                            -
-                          </button>
-                          <input
-                            className="share-stepper-value"
-                            name={`shareUnits:${member.value}`}
-                            readOnly
-                            type="number"
-                            value={shareUnitsMap[member.value] ?? 1}
-                          />
-                          <button
-                            className="share-stepper-btn"
-                            onClick={() => {
-                              setShareUnitsMap((prev) => ({
-                                ...prev,
-                                [member.value]: (prev[member.value] ?? 1) + 1,
-                              }));
-                              if (paymentFormErrors.shareUnits) {
-                                setPaymentFormErrors((prev) => ({ ...prev, shareUnits: undefined }));
-                              }
-                            }}
-                            type="button"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <span className="share-estimate">
-                          ${getShareEstimate(member.value).toFixed(2)}
-                        </span>
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-                {selectedShareMembers.map((member) => (
-                  <input key={member.value} name="shareMember" type="hidden" value={member.value} />
-                ))}
-                {paymentFormErrors.shareUnits ? (
-                  <p className="field-error">{paymentFormErrors.shareUnits}</p>
-                ) : null}
-              </div>
+              <PaymentFormFields
+                defaultDate={defaultPaymentDate}
+                members={group.members ?? []}
+                ref={paymentFormRef}
+              />
             </Modal>,
             document.body
           )}
