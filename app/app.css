@@ -12,8 +12,9 @@
   --primary-soft: #eff6ff;
   --secondary-hover: #f8fafc;
   --secondary-active: #eef2f7;
-  --nav-active: #0f766e;
-  --nav-active-strong: #0d5f59;
+  --nav-active: #2563eb;
+  --nav-active-bg: #eff6ff;
+  --nav-hover-bg: #f8fafc;
   --border: #dde4f0;
   --shadow: 0 8px 30px rgba(28, 45, 84, 0.08);
   --button-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
@@ -40,8 +41,9 @@ html[data-theme="dark"] {
   --primary-soft: #10233f;
   --secondary-hover: #17243b;
   --secondary-active: #1e2f4c;
-  --nav-active: #14b8a6;
-  --nav-active-strong: #0d9488;
+  --nav-active: #60a5fa;
+  --nav-active-bg: #10233f;
+  --nav-hover-bg: #17243b;
   --border: #283852;
   --shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
   --button-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -180,12 +182,12 @@ form[action$="destroy"] button {
 }
 
 #sidebar {
-  width: 22rem;
+  width: 21rem;
   align-self: stretch;
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-soft) 100%);
+  background: var(--surface);
   border-right: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  box-shadow: 1px 0 0 color-mix(in srgb, var(--border) 60%, transparent);
   display: flex;
   flex-direction: column;
   z-index: 5;
@@ -200,12 +202,14 @@ form[action$="destroy"] button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem 0.75rem;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--border);
 }
 
 .brand-title {
-  font-size: 1rem;
+  min-width: 0;
+  font-size: 0.98rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -218,6 +222,9 @@ form[action$="destroy"] button {
 .brand-title a {
   color: var(--text);
   text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand-title a:hover {
@@ -227,24 +234,24 @@ form[action$="destroy"] button {
 .brand-title::before {
   content: "PS";
   display: inline-block;
-  width: 1.8rem;
-  height: 1.8rem;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #38bdf8, #2563eb);
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 10px;
+  background: var(--primary);
   color: #fff;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-align: center;
-  line-height: 1.8rem;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  line-height: 1.9rem;
+  box-shadow: var(--button-shadow);
   margin-right: 0.75rem;
 }
 
 .theme-toggle {
-  min-width: 6.5rem;
+  min-width: auto;
   padding: 0.3rem 0.55rem;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -263,8 +270,8 @@ form[action$="destroy"] button {
 }
 
 .theme-toggle-track {
-  width: 2.2rem;
-  height: 1.22rem;
+  width: 2rem;
+  height: 1.1rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface) 24%, #000);
   position: relative;
@@ -273,8 +280,8 @@ form[action$="destroy"] button {
 }
 
 .theme-toggle-thumb {
-  width: 0.92rem;
-  height: 0.92rem;
+  width: 0.78rem;
+  height: 0.78rem;
   border-radius: 50%;
   background: #fff;
   position: absolute;
@@ -289,11 +296,11 @@ form[action$="destroy"] button {
 }
 
 .theme-toggle[aria-pressed="true"] .theme-toggle-thumb {
-  left: 1.08rem;
+  left: 1rem;
 }
 
 .theme-toggle-label {
-  min-width: 2.9rem;
+  min-width: 2.4rem;
   text-align: left;
 }
 
@@ -301,8 +308,8 @@ form[action$="destroy"] button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding-top: 1rem;
-  padding-bottom: 0.4rem;
+  padding-top: 1.1rem;
+  padding-bottom: 0.45rem;
 }
 
 .nav-section-toggle {
@@ -313,11 +320,12 @@ form[action$="destroy"] button {
   background: transparent;
   border: none;
   box-shadow: none;
-  padding: 0.15rem 0;
+  min-height: 2rem;
+  padding: 0;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   font-weight: 700;
 }
 
@@ -328,7 +336,7 @@ form[action$="destroy"] button {
 }
 
 .nav-section-toggle:focus-visible {
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
@@ -340,10 +348,11 @@ form[action$="destroy"] button {
 }
 
 .nav-section-icon {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1rem;
+  height: 1rem;
   display: block;
   flex-shrink: 0;
+  opacity: 0.78;
 }
 
 .nav-section-chevron {
@@ -365,7 +374,7 @@ form[action$="destroy"] button {
 }
 
 .nav-cta {
-  padding-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
 }
 
 .nav-cta form {
@@ -375,13 +384,26 @@ form[action$="destroy"] button {
 .nav-cta-button {
   width: 100%;
   justify-content: center;
-  padding: 0.6rem 0.9rem;
+  min-height: 2.35rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--primary-soft);
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--border));
+  color: var(--primary);
+  box-shadow: none;
+}
+
+.nav-cta-button:hover {
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
+  color: var(--primary-hover);
+  box-shadow: var(--button-shadow);
 }
 
 #sidebar nav {
   flex: 1;
   overflow: auto;
-  padding-top: 0.35rem;
+  padding-top: 0.25rem;
+  padding-bottom: 1rem;
 }
 
 #sidebar nav a span {
@@ -400,53 +422,73 @@ i {
 }
 
 .nav-list {
-  background-color: color-mix(in srgb, var(--surface) 75%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 0.55rem !important;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface-soft) 55%, transparent);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0 !important;
+  box-shadow: none;
 }
 
 #sidebar li {
-  margin: 0.3rem 0;
+  margin: 0.15rem 0;
 }
 
 #sidebar nav a {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
   white-space: pre;
-  padding: 0.62rem 0.9rem;
-  min-height: 2.35rem;
-  border-radius: 999px;
+  padding: 0.58rem 0.75rem 0.58rem 0.95rem;
+  min-height: 2.3rem;
+  border-radius: 10px;
   border: 1px solid transparent;
   color: var(--text);
   font-weight: 500;
   text-decoration: none;
   gap: 1rem;
-  transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+#sidebar nav a::before {
+  content: "";
+  position: absolute;
+  left: 0.35rem;
+  top: 50%;
+  width: 3px;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: transparent;
+  transform: translateY(-50%);
+  transition: background-color 120ms ease;
 }
 
 #sidebar nav a:hover {
-  background: color-mix(in srgb, var(--primary) 16%, var(--surface));
-  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+  background: var(--nav-hover-bg);
+  border-color: var(--border);
 }
 
 #sidebar nav a.active {
+  background: var(--nav-active-bg);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--nav-active) 22%, var(--border));
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nav-active) 8%, transparent);
+}
+
+#sidebar nav a.active::before {
   background: var(--nav-active);
-  color: #fff;
-  border-color: color-mix(in srgb, var(--nav-active) 65%, #000);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--nav-active) 35%, transparent);
 }
 
 #sidebar nav a.active:hover {
-  background: var(--nav-active-strong);
+  background: var(--nav-active-bg);
+  border-color: color-mix(in srgb, var(--nav-active) 30%, var(--border));
 }
 
 #sidebar nav a.pending {
-  animation: progress 2s infinite ease-in-out;
-  animation-delay: 200ms;
+  background: var(--secondary-hover);
+  color: var(--text-muted);
 }
 
 @keyframes progress {
