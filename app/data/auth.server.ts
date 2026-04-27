@@ -2,7 +2,12 @@ import { createHash, randomBytes, timingSafeEqual, scrypt as scryptCallback } fr
 import { promisify } from "node:util";
 import { redirect } from "react-router";
 
-import type { DataRepositories, UserRecord } from "./repositories/types";
+import type {
+  DataRepositories,
+  InviteCodeRecord,
+  PasswordResetTokenRecord,
+  UserRecord,
+} from "./repositories/types";
 
 const scrypt = promisify(scryptCallback);
 const sessionCookieName = "payshare_session";
@@ -113,19 +118,54 @@ export async function requireUserId(request: Request) {
   return user.uniqueId;
 }
 
-export async function registerUser(values: { email: string; name: string; password: string }) {
+export async function requireAdmin(request: Request) {
+  const user = await requireUser(request);
+  if (user.role !== "admin") {
+    throw new Response("Not Found", { status: 404 });
+  }
+  return user;
+}
+
+export function createTokenHash(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function createUrlToken() {
+  return randomBytes(32).toString("base64url");
+}
+
+export async function registerUser(values: {
+  email: string;
+  name: string;
+  password: string;
+  inviteCode?: string;
+}) {
   const repository = await getRepositories();
   const email = normalizeEmail(values.email);
   const existingUser = await repository.getUserByEmail(email);
   if (existingUser) {
     throw new Error("An account with this email already exists.");
   }
+
+  const inviteCodeRequired = await repository.hasActiveInviteCodes();
+  const inviteCode = values.inviteCode?.trim() ?? "";
+  if (inviteCodeRequired) {
+    const validInviteCode = await repository.validateInviteCode(inviteCode);
+    if (!validInviteCode) {
+      throw new Error("A valid invite code is required.");
+    }
+  }
+
   const passwordHash = await hashPassword(values.password);
-  return repository.createUser({
+  const user = await repository.createUser({
     email,
     name: values.name.trim() || email.split("@")[0],
     passwordHash,
   });
+  if (inviteCodeRequired) {
+    await repository.markInviteCodeUsed(inviteCode, user.uniqueId);
+  }
+  return user;
 }
 
 export async function loginUser(emailInput: string, password: string) {
@@ -163,6 +203,66 @@ export async function logout(request: Request) {
       "Set-Cookie": createLogoutCookie(),
     },
   });
+}
+
+export async function getInviteCodes() {
+  const repository = await getRepositories();
+  return repository.getInviteCodes();
+}
+
+export async function createInviteCode(
+  adminUserId: string,
+  values: { code?: string; maxUses?: number | null; expiresAt?: string | null }
+): Promise<InviteCodeRecord> {
+  const repository = await getRepositories();
+  const code = (values.code?.trim() || randomBytes(6).toString("base64url")).toUpperCase();
+  const maxUses =
+    values.maxUses === null || values.maxUses === undefined
+      ? null
+      : Math.max(1, Math.floor(values.maxUses));
+  return repository.createInviteCode(adminUserId, {
+    code,
+    maxUses,
+    expiresAt: values.expiresAt ?? null,
+  });
+}
+
+export async function disableInviteCode(adminUserId: string, code: string) {
+  const repository = await getRepositories();
+  await repository.disableInviteCode(adminUserId, code.trim().toUpperCase());
+}
+
+export async function createManualPasswordReset(
+  adminUserId: string,
+  userEmail: string
+): Promise<PasswordResetTokenRecord> {
+  const repository = await getRepositories();
+  const token = createUrlToken();
+  const tokenHash = createTokenHash(token);
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString();
+  const resetToken = await repository.createPasswordResetToken(
+    adminUserId,
+    userEmail.trim().toLowerCase(),
+    tokenHash,
+    expiresAt
+  );
+  return { ...resetToken, token };
+}
+
+export async function getPasswordResetToken(token: string) {
+  const repository = await getRepositories();
+  return repository.getPasswordResetToken(createTokenHash(token));
+}
+
+export async function resetPasswordWithToken(token: string, password: string) {
+  const repository = await getRepositories();
+  const tokenHash = createTokenHash(token);
+  const resetToken = await repository.getPasswordResetToken(tokenHash);
+  if (!resetToken) {
+    throw new Error("This reset link is invalid or has expired.");
+  }
+  const passwordHash = await hashPassword(password);
+  await repository.markPasswordResetTokenUsed(tokenHash, passwordHash);
 }
 
 export function getSafeRedirectTo(value: FormDataEntryValue | string | null, fallback = "/") {

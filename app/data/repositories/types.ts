@@ -39,6 +39,23 @@ export type UserRecord = {
   uniqueId: string;
   email: string;
   name: string;
+  role: "admin" | "user";
+};
+
+export type InviteCodeRecord = {
+  code: string;
+  createdByUserId: string;
+  maxUses: number | null;
+  usedCount: number;
+  expiresAt: string | null;
+  disabledAt: string | null;
+  createdAt: string;
+};
+
+export type PasswordResetTokenRecord = {
+  token: string;
+  user: UserRecord;
+  expiresAt: string;
 };
 
 export type FriendInviteRecord = {
@@ -54,10 +71,28 @@ export type UserRepository = {
   getUserById: (uniqueId: string) => Promise<UserRecord | null>;
   getUserByEmail: (email: string) => Promise<UserRecord | null>;
   createUser: (values: { email: string; name: string; passwordHash: string }) => Promise<UserRecord>;
+  updateUserPassword: (userId: string, passwordHash: string) => Promise<void>;
   getUserPasswordHash: (email: string) => Promise<string | null>;
   createSession: (userId: string, expiresAt: string) => Promise<string>;
   getSessionUser: (sessionId: string) => Promise<UserRecord | null>;
   deleteSession: (sessionId: string) => Promise<void>;
+  hasActiveInviteCodes: () => Promise<boolean>;
+  createInviteCode: (
+    adminUserId: string,
+    values: { code: string; maxUses: number | null; expiresAt: string | null }
+  ) => Promise<InviteCodeRecord>;
+  getInviteCodes: () => Promise<InviteCodeRecord[]>;
+  disableInviteCode: (adminUserId: string, code: string) => Promise<void>;
+  validateInviteCode: (code: string) => Promise<InviteCodeRecord | null>;
+  markInviteCodeUsed: (code: string, userId: string) => Promise<void>;
+  createPasswordResetToken: (
+    adminUserId: string,
+    userEmail: string,
+    tokenHash: string,
+    expiresAt: string
+  ) => Promise<PasswordResetTokenRecord>;
+  getPasswordResetToken: (tokenHash: string) => Promise<PasswordResetTokenRecord | null>;
+  markPasswordResetTokenUsed: (tokenHash: string, passwordHash: string) => Promise<void>;
 };
 
 export type DataRepositories = FriendRepository & GroupRepository & UserRepository;

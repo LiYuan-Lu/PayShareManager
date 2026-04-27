@@ -9,6 +9,7 @@ import {
 export default [
     route("login", "routes/login.tsx"),
     route("register", "routes/register.tsx"),
+    route("reset-password", "routes/reset-password.tsx"),
     route("logout", "routes/logout.tsx"),
     layout("layouts/sidebar.tsx", [
     index("routes/home.tsx"),
@@ -59,6 +60,10 @@ export default [
     route(
         "about",
         "routes/about.tsx"
+    ),
+    route(
+        "admin",
+        "routes/admin.tsx"
     ),
   ]),
 ] satisfies RouteConfig;

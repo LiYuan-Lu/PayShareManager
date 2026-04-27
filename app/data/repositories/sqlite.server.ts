@@ -14,13 +14,36 @@ import type {
   PaymentShare,
 } from "../group-data";
 import type { DataRepositories } from "./types";
-import type { FriendInviteRecord, UserRecord } from "./types";
+import type { FriendInviteRecord, InviteCodeRecord, UserRecord } from "./types";
 
 type DbUser = {
   unique_id: string;
   email: string;
   name: string;
   password_hash: string;
+  role: "admin" | "user";
+  created_at: string;
+};
+
+type DbInviteCode = {
+  code: string;
+  created_by_user_id: string;
+  max_uses: number | null;
+  used_count: number;
+  expires_at: string | null;
+  disabled_at: string | null;
+  created_at: string;
+};
+
+type DbPasswordResetToken = {
+  token_hash: string;
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  user_role: "admin" | "user";
+  created_by_user_id: string;
+  expires_at: string;
+  used_at: string | null;
   created_at: string;
 };
 
@@ -122,6 +145,7 @@ function migrate(database: Database.Database) {
       email TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user',
       created_at TEXT NOT NULL
     );
 
@@ -131,6 +155,37 @@ function migrate(database: Database.Database) {
       expires_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(unique_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS invite_codes (
+      code TEXT PRIMARY KEY,
+      created_by_user_id TEXT NOT NULL,
+      max_uses INTEGER,
+      used_count INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT,
+      disabled_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(unique_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS invite_code_uses (
+      code TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      used_at TEXT NOT NULL,
+      PRIMARY KEY (code, user_id),
+      FOREIGN KEY (code) REFERENCES invite_codes(code) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(unique_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_by_user_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(unique_id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(unique_id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS friends (
@@ -211,6 +266,9 @@ function migrate(database: Database.Database) {
   `);
 
   ensureDemoUser(database);
+  ensureColumn(database, "users", "role", "TEXT NOT NULL DEFAULT 'user'");
+  database.prepare("UPDATE users SET role = 'admin' WHERE unique_id = ?").run(demoUserId);
+  applyConfiguredAdmins(database);
   ensureColumn(database, "friends", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
   ensureColumn(database, "friends", "friend_user_id", "TEXT");
   ensureColumn(database, "groups", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
@@ -230,6 +288,7 @@ function migrate(database: Database.Database) {
   markMigration(database, "20260427_shared_group_members");
   markMigration(database, "20260427_payment_audit");
   markMigration(database, "20260427_payment_currency");
+  markMigration(database, "20260427_admin_invites_password_reset");
 }
 
 function ensureColumn(
@@ -246,8 +305,8 @@ function ensureColumn(
 
 function ensureDemoUser(database: Database.Database) {
   database.prepare(`
-    INSERT OR IGNORE INTO users (unique_id, email, name, password_hash, created_at)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO users (unique_id, email, name, password_hash, role, created_at)
+    VALUES (?, ?, ?, ?, 'admin', ?)
   `).run(
     demoUserId,
     "demo@payshare.local",
@@ -258,6 +317,16 @@ function ensureDemoUser(database: Database.Database) {
   database
     .prepare("UPDATE users SET password_hash = ? WHERE unique_id = ? AND password_hash = ?")
     .run(demoPasswordHash, demoUserId, "local-dev-password");
+}
+
+function applyConfiguredAdmins(database: Database.Database) {
+  const adminEmails = (process.env.PAYSHARE_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  adminEmails.forEach((email) => {
+    database.prepare("UPDATE users SET role = 'admin' WHERE lower(email) = lower(?)").run(email);
+  });
 }
 
 function backfillOwnerUserId(database: Database.Database) {
@@ -423,6 +492,19 @@ function mapUser(row: DbUser): UserRecord {
     uniqueId: row.unique_id,
     email: row.email,
     name: row.name,
+    role: row.role === "admin" ? "admin" : "user",
+  };
+}
+
+function mapInviteCode(row: DbInviteCode): InviteCodeRecord {
+  return {
+    code: row.code,
+    createdByUserId: row.created_by_user_id,
+    maxUses: row.max_uses,
+    usedCount: row.used_count,
+    expiresAt: row.expires_at,
+    disabledAt: row.disabled_at,
+    createdAt: row.created_at,
   };
 }
 
@@ -433,11 +515,13 @@ function mapFriendInvite(row: DbFriendInvite): FriendInviteRecord {
       uniqueId: row.sender_user_id,
       email: row.sender_email,
       name: row.sender_name,
+      role: "user",
     },
     recipient: {
       uniqueId: row.recipient_user_id,
       email: row.recipient_email,
       name: row.recipient_name,
+      role: "user",
     },
     status: row.status,
     createdAt: row.created_at,
@@ -732,14 +816,14 @@ export function getSqliteRepositories(): DataRepositories {
   return {
     async getUserById(uniqueId) {
       const row = getDb()
-        .prepare("SELECT unique_id, email, name, password_hash, created_at FROM users WHERE unique_id = ?")
+        .prepare("SELECT unique_id, email, name, password_hash, role, created_at FROM users WHERE unique_id = ?")
         .get(uniqueId) as DbUser | undefined;
       return row ? mapUser(row) : null;
     },
 
     async getUserByEmail(email) {
       const row = getDb()
-        .prepare("SELECT unique_id, email, name, password_hash, created_at FROM users WHERE lower(email) = lower(?)")
+        .prepare("SELECT unique_id, email, name, password_hash, role, created_at FROM users WHERE lower(email) = lower(?)")
         .get(email) as DbUser | undefined;
       return row ? mapUser(row) : null;
     },
@@ -748,10 +832,16 @@ export function getSqliteRepositories(): DataRepositories {
       const uniqueId = getUniqueId("users");
       const createdAt = new Date().toISOString();
       getDb().prepare(`
-        INSERT INTO users (unique_id, email, name, password_hash, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (unique_id, email, name, password_hash, role, created_at)
+        VALUES (?, ?, ?, ?, 'user', ?)
       `).run(uniqueId, values.email.toLowerCase(), values.name, values.passwordHash, createdAt);
-      return { uniqueId, email: values.email.toLowerCase(), name: values.name };
+      return { uniqueId, email: values.email.toLowerCase(), name: values.name, role: "user" };
+    },
+
+    async updateUserPassword(userId, passwordHash) {
+      getDb()
+        .prepare("UPDATE users SET password_hash = ? WHERE unique_id = ?")
+        .run(passwordHash, userId);
     },
 
     async getUserPasswordHash(email) {
@@ -773,7 +863,7 @@ export function getSqliteRepositories(): DataRepositories {
     async getSessionUser(sessionId) {
       const row = getDb()
         .prepare(`
-          SELECT users.unique_id, users.email, users.name, users.password_hash, users.created_at
+          SELECT users.unique_id, users.email, users.name, users.password_hash, users.role, users.created_at
           FROM sessions
           JOIN users ON users.unique_id = sessions.user_id
           WHERE sessions.session_id = ? AND sessions.expires_at > ?
@@ -784,6 +874,150 @@ export function getSqliteRepositories(): DataRepositories {
 
     async deleteSession(sessionId) {
       getDb().prepare("DELETE FROM sessions WHERE session_id = ?").run(sessionId);
+    },
+
+    async hasActiveInviteCodes() {
+      const row = getDb()
+        .prepare(`
+          SELECT 1
+          FROM invite_codes
+          WHERE disabled_at IS NULL
+          LIMIT 1
+        `)
+        .get();
+      return Boolean(row);
+    },
+
+    async createInviteCode(adminUserId, values) {
+      const createdAt = new Date().toISOString();
+      getDb().prepare(`
+        INSERT INTO invite_codes (code, created_by_user_id, max_uses, used_count, expires_at, disabled_at, created_at)
+        VALUES (?, ?, ?, 0, ?, NULL, ?)
+      `).run(values.code.toUpperCase(), adminUserId, values.maxUses, values.expiresAt, createdAt);
+      const row = getDb()
+        .prepare("SELECT code, created_by_user_id, max_uses, used_count, expires_at, disabled_at, created_at FROM invite_codes WHERE code = ?")
+        .get(values.code.toUpperCase()) as DbInviteCode;
+      return mapInviteCode(row);
+    },
+
+    async getInviteCodes() {
+      const rows = getDb()
+        .prepare(`
+          SELECT code, created_by_user_id, max_uses, used_count, expires_at, disabled_at, created_at
+          FROM invite_codes
+          ORDER BY created_at DESC
+        `)
+        .all() as DbInviteCode[];
+      return rows.map(mapInviteCode);
+    },
+
+    async disableInviteCode(adminUserId, code) {
+      getDb()
+        .prepare("UPDATE invite_codes SET disabled_at = ? WHERE code = ? AND disabled_at IS NULL")
+        .run(new Date().toISOString(), code.toUpperCase());
+    },
+
+    async validateInviteCode(code) {
+      const row = getDb()
+        .prepare(`
+          SELECT code, created_by_user_id, max_uses, used_count, expires_at, disabled_at, created_at
+          FROM invite_codes
+          WHERE code = ?
+            AND disabled_at IS NULL
+            AND (expires_at IS NULL OR expires_at > ?)
+            AND (max_uses IS NULL OR used_count < max_uses)
+        `)
+        .get(code.toUpperCase(), new Date().toISOString()) as DbInviteCode | undefined;
+      return row ? mapInviteCode(row) : null;
+    },
+
+    async markInviteCodeUsed(code, userId) {
+      const database = getDb();
+      const transaction = database.transaction(() => {
+        database.prepare(`
+          INSERT INTO invite_code_uses (code, user_id, used_at)
+          VALUES (?, ?, ?)
+        `).run(code.toUpperCase(), userId, new Date().toISOString());
+        database.prepare(`
+          UPDATE invite_codes
+          SET used_count = used_count + 1
+          WHERE code = ?
+        `).run(code.toUpperCase());
+      });
+      transaction();
+    },
+
+    async createPasswordResetToken(adminUserId, userEmail, tokenHash, expiresAt) {
+      const user = await this.getUserByEmail(userEmail);
+      if (!user) {
+        throw new Error("No account found with that email.");
+      }
+      getDb().prepare(`
+        INSERT INTO password_reset_tokens (
+          token_hash,
+          user_id,
+          created_by_user_id,
+          expires_at,
+          used_at,
+          created_at
+        )
+        VALUES (?, ?, ?, ?, NULL, ?)
+      `).run(tokenHash, user.uniqueId, adminUserId, expiresAt, new Date().toISOString());
+      return { token: tokenHash, user, expiresAt };
+    },
+
+    async getPasswordResetToken(tokenHash) {
+      const row = getDb()
+        .prepare(`
+          SELECT
+            password_reset_tokens.token_hash,
+            password_reset_tokens.user_id,
+            users.email AS user_email,
+            users.name AS user_name,
+            users.role AS user_role,
+            password_reset_tokens.created_by_user_id,
+            password_reset_tokens.expires_at,
+            password_reset_tokens.used_at,
+            password_reset_tokens.created_at
+          FROM password_reset_tokens
+          JOIN users ON users.unique_id = password_reset_tokens.user_id
+          WHERE password_reset_tokens.token_hash = ?
+            AND password_reset_tokens.used_at IS NULL
+            AND password_reset_tokens.expires_at > ?
+        `)
+        .get(tokenHash, new Date().toISOString()) as DbPasswordResetToken | undefined;
+      return row
+        ? {
+            token: row.token_hash,
+            user: {
+              uniqueId: row.user_id,
+              email: row.user_email,
+              name: row.user_name,
+              role: row.user_role === "admin" ? "admin" : "user",
+            },
+            expiresAt: row.expires_at,
+          }
+        : null;
+    },
+
+    async markPasswordResetTokenUsed(tokenHash, passwordHash) {
+      const resetToken = await this.getPasswordResetToken(tokenHash);
+      if (!resetToken) {
+        throw new Error("This reset link is invalid or has expired.");
+      }
+      const database = getDb();
+      const transaction = database.transaction(() => {
+        database
+          .prepare("UPDATE users SET password_hash = ? WHERE unique_id = ?")
+          .run(passwordHash, resetToken.user.uniqueId);
+        database
+          .prepare("UPDATE password_reset_tokens SET used_at = ? WHERE token_hash = ?")
+          .run(new Date().toISOString(), tokenHash);
+        database
+          .prepare("DELETE FROM sessions WHERE user_id = ?")
+          .run(resetToken.user.uniqueId);
+      });
+      transaction();
     },
 
     async getFriends(ownerUserId) {
@@ -1039,11 +1273,13 @@ export function getSqliteRepositories(): DataRepositories {
             uniqueId: invite.sender_user_id,
             email: invite.sender_email,
             name: invite.sender_name,
+            role: "user",
           });
           ensureFriendRecord(database, invite.sender_user_id, {
             uniqueId: invite.recipient_user_id,
             email: invite.recipient_email,
             name: invite.recipient_name,
+            role: "user",
           });
         }
       });

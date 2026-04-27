@@ -250,6 +250,12 @@ export default function SidebarLayout({
           ) : null}
         </nav>
         <div className="sidebar-footer">
+          {user.role === "admin" ? (
+            <NavLink to="/admin">
+              <span className="nav-section-icon" aria-hidden="true">A</span>
+              Admin
+            </NavLink>
+          ) : null}
           <NavLink to="/about">
             <img alt="" className="nav-section-icon" src="/icons/app.svg" />
             About

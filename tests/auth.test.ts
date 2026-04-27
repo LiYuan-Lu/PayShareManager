@@ -140,6 +140,83 @@ describe("auth", () => {
 
     assert.deepEqual(friends.map((friend) => friend.name), ["Legacy Friend"]);
     assert.deepEqual(groups.map((group) => group.name), ["Legacy Group"]);
+    assert.equal(demoUser.role, "admin");
+  });
+
+  it("requires invite codes after an admin creates one", async () => {
+    const demoUser = await auth.loginUser("demo@payshare.local", "password123");
+    const inviteCode = await auth.createInviteCode(demoUser.uniqueId, {
+      code: "FRIEND-ONLY",
+      maxUses: 1,
+    });
+    assert.equal(inviteCode.code, "FRIEND-ONLY");
+
+    await assert.rejects(
+      () =>
+        auth.registerUser({
+          email: "no-code@example.com",
+          name: "No Code",
+          password: "password123",
+        }),
+      /valid invite code/
+    );
+
+    const invitedUser = await auth.registerUser({
+      email: "with-code@example.com",
+      name: "With Code",
+      password: "password123",
+      inviteCode: "friend-only",
+    });
+    assert.equal(invitedUser.email, "with-code@example.com");
+
+    await assert.rejects(
+      () =>
+        auth.registerUser({
+          email: "code-used@example.com",
+          name: "Code Used",
+          password: "password123",
+          inviteCode: "FRIEND-ONLY",
+        }),
+      /valid invite code/
+    );
+    await auth.disableInviteCode(demoUser.uniqueId, inviteCode.code);
+  });
+
+  it("lets admins create one-time password reset tokens", async () => {
+    const demoUser = await auth.loginUser("demo@payshare.local", "password123");
+    const resetUser = await auth.registerUser({
+      email: "reset-me@example.com",
+      name: "Reset Me",
+      password: "password123",
+      inviteCode: "FRIEND-ONLY",
+    }).catch(async () => {
+      const inviteCode = await auth.createInviteCode(demoUser.uniqueId, {
+        code: "RESET-CODE",
+        maxUses: 1,
+      });
+      return auth.registerUser({
+        email: "reset-me@example.com",
+        name: "Reset Me",
+        password: "password123",
+        inviteCode: inviteCode.code,
+      });
+    });
+
+    const resetToken = await auth.createManualPasswordReset(demoUser.uniqueId, resetUser.email);
+    assert.equal(resetToken.user.email, resetUser.email);
+
+    await auth.resetPasswordWithToken(resetToken.token, "new-password");
+    await assert.rejects(
+      () => auth.loginUser(resetUser.email, "password123"),
+      /Invalid email or password/
+    );
+    const loggedIn = await auth.loginUser(resetUser.email, "new-password");
+    assert.equal(loggedIn.uniqueId, resetUser.uniqueId);
+    await assert.rejects(
+      () => auth.resetPasswordWithToken(resetToken.token, "another-password"),
+      /invalid or has expired/
+    );
+    await auth.disableInviteCode(demoUser.uniqueId, "RESET-CODE");
   });
 });
 

@@ -892,6 +892,85 @@ i {
   min-width: 7rem;
 }
 
+.admin-shell {
+  display: grid;
+  gap: 1rem;
+  max-width: 960px;
+  padding: 2rem;
+}
+
+.admin-hero,
+.admin-card,
+.admin-result {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+}
+
+.admin-hero h1,
+.admin-card h2 {
+  margin: 0 0 0.6rem;
+}
+
+.admin-hero p:last-child {
+  margin-bottom: 0;
+  color: var(--text-muted);
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.admin-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-result {
+  display: grid;
+  gap: 0.35rem;
+  border-color: color-mix(in srgb, var(--success) 34%, var(--border));
+  background: var(--success-soft);
+}
+
+.admin-result span,
+.admin-result small,
+.admin-code-row span {
+  color: var(--text-muted);
+}
+
+.admin-result strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-code-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.admin-code-row > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-status {
+  font-weight: 700;
+}
+
 .danger-button {
   background: var(--danger);
   border-color: var(--danger);

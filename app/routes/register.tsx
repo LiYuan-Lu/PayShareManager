@@ -39,6 +39,7 @@ export async function action({ request }: Route.ActionArgs) {
   const name = formData.get("name")?.toString() ?? "";
   const password = formData.get("password")?.toString() ?? "";
   const confirmPassword = formData.get("confirmPassword")?.toString() ?? "";
+  const inviteCode = formData.get("inviteCode")?.toString() ?? "";
   const redirectTo = getSafeRedirectTo(formData.get("redirectTo"));
 
   if (password.length < 8) {
@@ -49,7 +50,7 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   try {
-    const user = await registerUser({ email, name, password });
+    const user = await registerUser({ email, name, password, inviteCode });
     return createUserSession(user.uniqueId, redirectTo);
   } catch (error) {
     return {
@@ -85,6 +86,15 @@ export default function Register() {
         <label className="auth-field">
           <span>Email</span>
           <input autoComplete="email" name="email" placeholder="you@example.com" required type="email" />
+        </label>
+        <label className="auth-field">
+          <span>Invite code</span>
+          <input
+            autoComplete="off"
+            name="inviteCode"
+            placeholder="Required when registration is invite-only"
+            type="text"
+          />
         </label>
         <label className="auth-field">
           <span>Password</span>
