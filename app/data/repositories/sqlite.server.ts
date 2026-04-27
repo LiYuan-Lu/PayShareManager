@@ -99,7 +99,6 @@ type DbPayment = {
   payment_id: number;
   name: string;
   payer_id: string;
-  payer_name: string;
   cost: number;
   currency: string | null;
   split_mode: "equal" | "shares" | null;
@@ -116,7 +115,6 @@ type DbPayment = {
 
 type DbPaymentShare = {
   member_id: string;
-  member_name: string;
   shares: number;
 };
 
@@ -242,7 +240,6 @@ function migrate(database: Database.Database) {
       group_id TEXT NOT NULL,
       member_id TEXT NOT NULL,
       member_user_id TEXT,
-      name TEXT NOT NULL,
       sort_order INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (group_id, member_id),
       FOREIGN KEY (group_id) REFERENCES groups(unique_id) ON DELETE CASCADE,
@@ -254,7 +251,6 @@ function migrate(database: Database.Database) {
       payment_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       payer_id TEXT NOT NULL,
-      payer_name TEXT NOT NULL,
       cost REAL NOT NULL,
       currency TEXT NOT NULL DEFAULT '${defaultCurrency}',
       split_mode TEXT NOT NULL DEFAULT 'equal',
@@ -273,7 +269,6 @@ function migrate(database: Database.Database) {
       group_id TEXT NOT NULL,
       payment_id INTEGER NOT NULL,
       member_id TEXT NOT NULL,
-      member_name TEXT NOT NULL,
       shares INTEGER NOT NULL DEFAULT 1,
       sort_order INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (group_id, payment_id, member_id),
@@ -304,6 +299,7 @@ function migrate(database: Database.Database) {
   backfillOwnerUserId(database);
   backfillAccountLinks(database);
   backfillPaymentAudit(database);
+  removeCachedMemberNames(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date().toISOString());
   markMigration(database, "20260427_auth_user_scope");
   markMigration(database, "20260427_group_settlement_state");
@@ -313,6 +309,12 @@ function migrate(database: Database.Database) {
   markMigration(database, "20260427_payment_currency");
   markMigration(database, "20260427_admin_invites_password_reset");
   markMigration(database, "20260427_login_rate_limit");
+  markMigration(database, "20260427_drop_member_name_caches");
+}
+
+function hasColumn(database: Database.Database, tableName: string, columnName: string) {
+  const columns = database.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+  return columns.some((column) => column.name === columnName);
 }
 
 function ensureColumn(
@@ -321,10 +323,121 @@ function ensureColumn(
   columnName: string,
   definition: string
 ) {
-  const columns = database.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
-  if (!columns.some((column) => column.name === columnName)) {
+  if (!hasColumn(database, tableName, columnName)) {
     database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
   }
+}
+
+function removeCachedMemberNames(database: Database.Database) {
+  if (
+    !hasColumn(database, "group_members", "name") &&
+    !hasColumn(database, "payments", "payer_name") &&
+    !hasColumn(database, "payment_shares", "member_name")
+  ) {
+    return;
+  }
+
+  database.pragma("foreign_keys = OFF");
+  const transaction = database.transaction(() => {
+    if (hasColumn(database, "group_members", "name")) {
+      database.exec(`
+        CREATE TABLE group_members_next (
+          group_id TEXT NOT NULL,
+          member_id TEXT NOT NULL,
+          member_user_id TEXT,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (group_id, member_id),
+          FOREIGN KEY (group_id) REFERENCES groups(unique_id) ON DELETE CASCADE,
+          FOREIGN KEY (member_user_id) REFERENCES users(unique_id) ON DELETE SET NULL
+        );
+
+        INSERT OR IGNORE INTO group_members_next (group_id, member_id, member_user_id, sort_order)
+        SELECT group_id, member_id, member_user_id, sort_order
+        FROM group_members;
+
+        DROP TABLE group_members;
+        ALTER TABLE group_members_next RENAME TO group_members;
+      `);
+    }
+
+    if (hasColumn(database, "payments", "payer_name")) {
+      database.exec(`
+        CREATE TABLE payments_next (
+          group_id TEXT NOT NULL,
+          payment_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          payer_id TEXT NOT NULL,
+          cost REAL NOT NULL,
+          currency TEXT NOT NULL DEFAULT '${defaultCurrency}',
+          split_mode TEXT NOT NULL DEFAULT 'equal',
+          created_at TEXT,
+          created_by_user_id TEXT,
+          updated_by_user_id TEXT,
+          updated_at TEXT,
+          you_should_pay REAL,
+          PRIMARY KEY (group_id, payment_id),
+          FOREIGN KEY (group_id) REFERENCES groups(unique_id) ON DELETE CASCADE,
+          FOREIGN KEY (created_by_user_id) REFERENCES users(unique_id) ON DELETE SET NULL,
+          FOREIGN KEY (updated_by_user_id) REFERENCES users(unique_id) ON DELETE SET NULL
+        );
+
+        INSERT OR REPLACE INTO payments_next (
+          group_id,
+          payment_id,
+          name,
+          payer_id,
+          cost,
+          currency,
+          split_mode,
+          created_at,
+          created_by_user_id,
+          updated_by_user_id,
+          updated_at,
+          you_should_pay
+        )
+        SELECT
+          group_id,
+          payment_id,
+          name,
+          payer_id,
+          cost,
+          currency,
+          split_mode,
+          created_at,
+          created_by_user_id,
+          updated_by_user_id,
+          updated_at,
+          you_should_pay
+        FROM payments;
+
+        DROP TABLE payments;
+        ALTER TABLE payments_next RENAME TO payments;
+      `);
+    }
+
+    if (hasColumn(database, "payment_shares", "member_name")) {
+      database.exec(`
+        CREATE TABLE payment_shares_next (
+          group_id TEXT NOT NULL,
+          payment_id INTEGER NOT NULL,
+          member_id TEXT NOT NULL,
+          shares INTEGER NOT NULL DEFAULT 1,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (group_id, payment_id, member_id),
+          FOREIGN KEY (group_id, payment_id) REFERENCES payments(group_id, payment_id) ON DELETE CASCADE
+        );
+
+        INSERT OR REPLACE INTO payment_shares_next (group_id, payment_id, member_id, shares, sort_order)
+        SELECT group_id, payment_id, member_id, shares, sort_order
+        FROM payment_shares;
+
+        DROP TABLE payment_shares;
+        ALTER TABLE payment_shares_next RENAME TO payment_shares;
+      `);
+    }
+  });
+  transaction();
+  database.pragma("foreign_keys = ON");
 }
 
 function ensureDemoUser(database: Database.Database) {
@@ -677,10 +790,24 @@ function mapGroup(row: DbGroup, viewerUserId: string): GroupRecord {
   const database = getDb();
   const members = database
     .prepare(`
-      SELECT member_id, member_user_id, name
+      SELECT
+        group_members.member_id,
+        group_members.member_user_id,
+        COALESCE(
+          CASE WHEN group_members.member_id = '0' THEN owner.name END,
+          member_user.name,
+          friends.name,
+          'Unknown member'
+        ) AS name
       FROM group_members
-      WHERE group_id = ?
-      ORDER BY sort_order, name
+      JOIN groups ON groups.unique_id = group_members.group_id
+      JOIN users owner ON owner.unique_id = groups.owner_user_id
+      LEFT JOIN users member_user ON member_user.unique_id = group_members.member_user_id
+      LEFT JOIN friends
+        ON friends.owner_user_id = groups.owner_user_id
+       AND friends.unique_id = group_members.member_id
+      WHERE group_members.group_id = ?
+      ORDER BY group_members.sort_order, name
     `)
     .all(row.unique_id) as DbMember[];
   const displayMembers = members.map((member) => {
@@ -699,7 +826,6 @@ function mapGroup(row: DbGroup, viewerUserId: string): GroupRecord {
         payments.payment_id,
         payments.name,
         payments.payer_id,
-        payments.payer_name,
         payments.cost,
         payments.currency,
         payments.split_mode,
@@ -746,7 +872,7 @@ function mapPayment(groupId: string, row: DbPayment, membersById: Map<string, Me
   const database = getDb();
   const shares = database
     .prepare(`
-      SELECT member_id, member_name, shares
+      SELECT member_id, shares
       FROM payment_shares
       WHERE group_id = ? AND payment_id = ?
       ORDER BY sort_order
@@ -755,7 +881,7 @@ function mapPayment(groupId: string, row: DbPayment, membersById: Map<string, Me
   const shareDetails: PaymentShare[] = shares.map((share) => ({
     member: membersById.get(share.member_id) ?? {
       uniqueId: share.member_id,
-      name: share.member_name,
+      name: "Unknown member",
     },
     shares: share.shares,
   }));
@@ -764,7 +890,7 @@ function mapPayment(groupId: string, row: DbPayment, membersById: Map<string, Me
     name: row.name,
     payer: membersById.get(row.payer_id) ?? {
       uniqueId: row.payer_id,
-      name: row.payer_name,
+      name: "Unknown member",
     },
     cost: row.cost,
     currency: normalizeCurrency(row.currency ?? defaultCurrency),
@@ -800,8 +926,8 @@ function saveMembers(
   members: Member[] = []
 ) {
   const insertMember = database.prepare(`
-    INSERT INTO group_members (group_id, member_id, member_user_id, name, sort_order)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO group_members (group_id, member_id, member_user_id, sort_order)
+    VALUES (?, ?, ?, ?)
   `);
 
   database.prepare("DELETE FROM group_members WHERE group_id = ?").run(groupId);
@@ -810,7 +936,6 @@ function saveMembers(
       groupId,
       member.uniqueId,
       getMemberUserId(database, ownerUserId, member),
-      member.name,
       index
     );
   });
@@ -842,7 +967,6 @@ function savePayment(
       payment_id,
       name,
       payer_id,
-      payer_name,
       cost,
       currency,
       split_mode,
@@ -852,13 +976,12 @@ function savePayment(
       updated_at,
       you_should_pay
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     groupId,
     paymentId,
     payment.name,
     payment.payer.uniqueId,
-    payment.payer.name,
     payment.cost,
     normalizeCurrency(payment.currency ?? defaultCurrency),
     payment.splitMode ?? "equal",
@@ -874,8 +997,8 @@ function savePayment(
     .run(groupId, paymentId);
 
   const insertShare = database.prepare(`
-    INSERT INTO payment_shares (group_id, payment_id, member_id, member_name, shares, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO payment_shares (group_id, payment_id, member_id, shares, sort_order)
+    VALUES (?, ?, ?, ?, ?)
   `);
   const shareDetails =
     payment.shareDetails?.length
@@ -887,7 +1010,6 @@ function savePayment(
       groupId,
       paymentId,
       share.member.uniqueId,
-      share.member.name,
       Math.max(1, Math.round(share.shares)),
       index
     );
@@ -933,35 +1055,6 @@ export function getSqliteRepositories(): DataRepositories {
         database
           .prepare("UPDATE friends SET name = ? WHERE lower(email) = lower(?)")
           .run(values.name, existing.email);
-        database
-          .prepare("UPDATE group_members SET name = ? WHERE member_user_id = ?")
-          .run(values.name, userId);
-        database
-          .prepare(`
-            UPDATE payments
-            SET payer_name = ?
-            WHERE EXISTS (
-              SELECT 1
-              FROM group_members
-              WHERE group_members.group_id = payments.group_id
-                AND group_members.member_id = payments.payer_id
-                AND group_members.member_user_id = ?
-            )
-          `)
-          .run(values.name, userId);
-        database
-          .prepare(`
-            UPDATE payment_shares
-            SET member_name = ?
-            WHERE EXISTS (
-              SELECT 1
-              FROM group_members
-              WHERE group_members.group_id = payment_shares.group_id
-                AND group_members.member_id = payment_shares.member_id
-                AND group_members.member_user_id = ?
-            )
-          `)
-          .run(values.name, userId);
       });
       transaction();
       return {
@@ -1242,25 +1335,14 @@ export function getSqliteRepositories(): DataRepositories {
         `).run(values.name, email, email, ownerUserId, uniqueId);
         database.prepare(`
           UPDATE group_members
-          SET name = ?,
-              member_user_id = (
+          SET member_user_id = (
                 SELECT friends.friend_user_id
                 FROM friends
                 WHERE friends.owner_user_id = ?
                   AND friends.unique_id = ?
               )
           WHERE member_id = ? AND group_id IN (SELECT unique_id FROM groups WHERE owner_user_id = ?)
-        `).run(values.name, ownerUserId, uniqueId, uniqueId, ownerUserId);
-        database.prepare(`
-          UPDATE payments
-          SET payer_name = ?
-          WHERE payer_id = ? AND group_id IN (SELECT unique_id FROM groups WHERE owner_user_id = ?)
-        `).run(values.name, uniqueId, ownerUserId);
-        database.prepare(`
-          UPDATE payment_shares
-          SET member_name = ?
-          WHERE member_id = ? AND group_id IN (SELECT unique_id FROM groups WHERE owner_user_id = ?)
-        `).run(values.name, uniqueId, ownerUserId);
+        `).run(ownerUserId, uniqueId, uniqueId, ownerUserId);
       });
       transaction();
       const updated = await this.getFriend(ownerUserId, uniqueId);

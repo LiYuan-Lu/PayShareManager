@@ -12,6 +12,7 @@ import type * as GroupDataModule from "../app/data/group-data.js";
 let auth: typeof AuthModule;
 let friendData: typeof FriendDataModule;
 let groupData: typeof GroupDataModule;
+let testDbPath: string;
 
 function createLegacyDb(dbPath: string) {
   const database = new Database(dbPath);
@@ -58,6 +59,7 @@ function createLegacyDb(dbPath: string) {
 before(async () => {
   const dbDir = mkdtempSync(path.join(tmpdir(), "payshare-auth-test-"));
   const dbPath = path.join(dbDir, "test.db");
+  testDbPath = dbPath;
   createLegacyDb(dbPath);
   process.env.PAYSHARE_DB_PATH = dbPath;
   auth = await import("../app/data/auth.server.js");
@@ -192,6 +194,19 @@ describe("auth", () => {
     assert.deepEqual(friends.map((friend) => friend.name), ["Legacy Friend"]);
     assert.deepEqual(groups.map((group) => group.name), ["Legacy Group"]);
     assert.equal(demoUser.role, "admin");
+  });
+
+  it("stores payment and group membership identities without cached member names", async () => {
+    const database = new Database(testDbPath);
+    const columns = (tableName: string) =>
+      (database.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>).map(
+        (column) => column.name
+      );
+
+    assert.ok(!columns("group_members").includes("name"));
+    assert.ok(!columns("payments").includes("payer_name"));
+    assert.ok(!columns("payment_shares").includes("member_name"));
+    database.close();
   });
 
   it("requires invite codes after an admin creates one", async () => {
