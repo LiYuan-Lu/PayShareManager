@@ -198,18 +198,10 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
         </p>
         <p>
           <span>Cost</span>
-          <div className="share-stepper cost-stepper">
-            <button
-              aria-label="Decrease cost"
-              className="share-stepper-btn"
-              onClick={() => adjustPaymentCost(-1)}
-              type="button"
-            >
-              -
-            </button>
+          <div className="cost-stepper">
             <input
               aria-label="Cost"
-              className="share-stepper-value cost-stepper-value"
+              className="cost-stepper-value"
               inputMode="decimal"
               name="cost"
               onChange={(event) => updatePaymentCost(event.target.value)}
@@ -218,14 +210,24 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
               value={paymentCostValue}
               required
             />
-            <button
-              aria-label="Increase cost"
-              className="share-stepper-btn"
-              onClick={() => adjustPaymentCost(1)}
-              type="button"
-            >
-              +
-            </button>
+            <div className="cost-stepper-controls">
+              <button
+                aria-label="Increase cost"
+                className="cost-stepper-btn cost-stepper-btn-up"
+                onClick={() => adjustPaymentCost(1)}
+                type="button"
+              >
+                +
+              </button>
+              <button
+                aria-label="Decrease cost"
+                className="cost-stepper-btn cost-stepper-btn-down"
+                onClick={() => adjustPaymentCost(-1)}
+                type="button"
+              >
+                -
+              </button>
+            </div>
           </div>
         </p>
         {formErrors.cost ? <p className="field-error">{formErrors.cost}</p> : null}

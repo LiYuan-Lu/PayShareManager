@@ -142,13 +142,13 @@ button:hover {
   box-shadow: var(--button-shadow-hover);
 }
 
-button[type="button"]:not(.add-button):not(.danger-button):not(.delete-group-member-button):not(.add-group-member-button):not(.share-stepper-btn) {
+button[type="button"]:not(.add-button):not(.danger-button):not(.delete-group-member-button):not(.add-group-member-button):not(.share-stepper-btn):not(.cost-stepper-btn) {
   background: var(--surface);
   border-color: var(--border);
   color: var(--text);
 }
 
-button[type="button"]:not(.add-button):not(.danger-button):not(.delete-group-member-button):not(.add-group-member-button):not(.share-stepper-btn):hover {
+button[type="button"]:not(.add-button):not(.danger-button):not(.delete-group-member-button):not(.add-group-member-button):not(.share-stepper-btn):not(.cost-stepper-btn):hover {
   background: var(--secondary-hover);
   border-color: color-mix(in srgb, var(--text-muted) 28%, var(--border));
   color: var(--text);
@@ -1245,17 +1245,69 @@ p span {
 }
 
 .cost-stepper {
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr) 2.15rem;
+  align-items: stretch;
   width: min(13rem, 100%);
+  min-height: 2.75rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  border-radius: 999px;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.cost-stepper:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
 .cost-stepper-value {
-  width: 7rem !important;
+  width: 100%;
   min-width: 0;
+  border: none !important;
+  border-radius: 999px 0 0 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0.55rem 0.9rem !important;
+  font-weight: 700;
 }
 
 .cost-stepper-value::placeholder {
   color: var(--text-muted);
   font-weight: 500;
+}
+
+.cost-stepper-controls {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  border-left: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+}
+
+.cost-stepper-btn {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--primary);
+  box-shadow: none;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.cost-stepper-btn:hover {
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+  border: none;
+  color: var(--primary-hover);
+  box-shadow: none;
+}
+
+.cost-stepper-btn-up {
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
 }
 
 .share-estimate {
