@@ -51,24 +51,43 @@ function getSessionId(request: Request) {
   return parseCookies(request).get(sessionCookieName) ?? null;
 }
 
+function shouldUseSecureCookies() {
+  const configured = process.env.PAYSHARE_COOKIE_SECURE?.trim().toLowerCase();
+  if (configured === "true" || configured === "1" || configured === "yes") {
+    return true;
+  }
+  if (configured === "false" || configured === "0" || configured === "no") {
+    return false;
+  }
+  return process.env.NODE_ENV === "production";
+}
+
 function createSessionCookie(sessionId: string) {
-  return [
+  const attributes = [
     `${sessionCookieName}=${encodeURIComponent(sessionId)}`,
     "HttpOnly",
     "Path=/",
     "SameSite=Lax",
     `Max-Age=${sessionMaxAgeSeconds}`,
-  ].join("; ");
+  ];
+  if (shouldUseSecureCookies()) {
+    attributes.push("Secure");
+  }
+  return attributes.join("; ");
 }
 
 export function createLogoutCookie() {
-  return [
+  const attributes = [
     `${sessionCookieName}=`,
     "HttpOnly",
     "Path=/",
     "SameSite=Lax",
     "Max-Age=0",
-  ].join("; ");
+  ];
+  if (shouldUseSecureCookies()) {
+    attributes.push("Secure");
+  }
+  return attributes.join("; ");
 }
 
 export async function hashPassword(password: string) {

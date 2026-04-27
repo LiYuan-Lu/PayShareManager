@@ -14,5 +14,6 @@ services:
       PAYSHARE_DB_PATH: /app/data/payshare.db
       PAYSHARE_ADMIN_EMAIL: ${PAYSHARE_ADMIN_EMAIL:-}
       PAYSHARE_ADMIN_PASSWORD: ${PAYSHARE_ADMIN_PASSWORD:-}
+      PAYSHARE_COOKIE_SECURE: ${PAYSHARE_COOKIE_SECURE:-true}
     volumes:
       - ./data:/app/data

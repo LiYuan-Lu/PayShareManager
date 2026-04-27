@@ -52,6 +52,7 @@ Set the initial admin account in `.env`:
 ```text
 PAYSHARE_ADMIN_EMAIL=you@example.com
 PAYSHARE_ADMIN_PASSWORD=use-a-long-password
+PAYSHARE_COOKIE_SECURE=true
 ```
 
 When the container starts, the app creates this account as admin if it does not
@@ -69,6 +70,10 @@ demo@payshare.local / password123
 
 After signing in as admin, open `/admin` to create invite codes or generate
 manual password reset links.
+
+For public HTTPS deployments, keep `PAYSHARE_COOKIE_SECURE=true` so session
+cookies are only sent over HTTPS. If you run the container directly over plain
+HTTP for local testing, set `PAYSHARE_COOKIE_SECURE=false`.
 
 SQLite data is stored at:
 

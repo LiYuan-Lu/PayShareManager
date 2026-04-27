@@ -116,6 +116,21 @@ describe("auth", () => {
     assert.equal(currentUser?.uniqueId, user.uniqueId);
   });
 
+  it("marks session cookies secure in production", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    let cookie: string | null = null;
+    try {
+      process.env.NODE_ENV = "production";
+      const user = await auth.loginUser("alice@example.com", "password123");
+      const response = await auth.createUserSession(user.uniqueId, "/");
+      cookie = response.headers.get("Set-Cookie");
+    } finally {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
+
+    assert.match(cookie ?? "", /Secure/);
+  });
+
   it("redirects unauthenticated requests to login", async () => {
     await assert.rejects(
       () => auth.requireUser(new Request("http://localhost/groups/123?tab=payments")),
