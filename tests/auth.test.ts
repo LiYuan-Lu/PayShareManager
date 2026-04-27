@@ -3,6 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { before, describe, it } from "node:test";
+import Database from "better-sqlite3";
 
 import type * as AuthModule from "../app/data/auth.server.js";
 import type * as FriendDataModule from "../app/data/friend-data.js";
@@ -12,9 +13,53 @@ let auth: typeof AuthModule;
 let friendData: typeof FriendDataModule;
 let groupData: typeof GroupDataModule;
 
+function createLegacyDb(dbPath: string) {
+  const database = new Database(dbPath);
+  database.exec(`
+    CREATE TABLE friends (
+      unique_id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE groups (
+      unique_id TEXT PRIMARY KEY,
+      name TEXT,
+      description TEXT,
+      favorite INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      payment_next_id INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE group_members (
+      group_id TEXT NOT NULL,
+      member_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (group_id, member_id)
+    );
+  `);
+  database
+    .prepare("INSERT INTO friends (unique_id, name, email, created_at) VALUES (?, ?, ?, ?)")
+    .run("legacy-friend", "Legacy Friend", "", "2026-04-27T00:00:00.000Z");
+  database
+    .prepare(`
+      INSERT INTO groups (unique_id, name, description, favorite, created_at, payment_next_id)
+      VALUES (?, ?, ?, 0, ?, 0)
+    `)
+    .run("legacy-group", "Legacy Group", "Migrated from local data", "2026-04-27T00:00:00.000Z");
+  database
+    .prepare("INSERT INTO group_members (group_id, member_id, name, sort_order) VALUES (?, ?, ?, ?)")
+    .run("legacy-group", "0", "You", 0);
+  database.close();
+}
+
 before(async () => {
   const dbDir = mkdtempSync(path.join(tmpdir(), "payshare-auth-test-"));
-  process.env.PAYSHARE_DB_PATH = path.join(dbDir, "test.db");
+  const dbPath = path.join(dbDir, "test.db");
+  createLegacyDb(dbPath);
+  process.env.PAYSHARE_DB_PATH = dbPath;
   auth = await import("../app/data/auth.server.js");
   friendData = await import("../app/data/friend-data.js");
   groupData = await import("../app/data/group-data.js");
@@ -84,6 +129,17 @@ describe("auth", () => {
         return true;
       }
     );
+  });
+
+  it("migrates legacy local data to the demo user", async () => {
+    const demoUser = await auth.loginUser("demo@payshare.local", "password123");
+    const [friends, groups] = await Promise.all([
+      friendData.getFriends(demoUser.uniqueId),
+      groupData.getGroups(demoUser.uniqueId),
+    ]);
+
+    assert.deepEqual(friends.map((friend) => friend.name), ["Legacy Friend"]);
+    assert.deepEqual(groups.map((group) => group.name), ["Legacy Group"]);
   });
 });
 

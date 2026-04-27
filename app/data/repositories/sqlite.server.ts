@@ -85,6 +85,11 @@ function getDb() {
 
 function migrate(database: Database.Database) {
   database.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       unique_id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,
@@ -156,9 +161,12 @@ function migrate(database: Database.Database) {
     );
   `);
 
+  ensureDemoUser(database);
   ensureColumn(database, "friends", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
   ensureColumn(database, "groups", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
+  backfillOwnerUserId(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date().toISOString());
+  markMigration(database, "20260427_auth_user_scope");
 }
 
 function ensureColumn(
@@ -173,7 +181,7 @@ function ensureColumn(
   }
 }
 
-function seed(database: Database.Database) {
+function ensureDemoUser(database: Database.Database) {
   database.prepare(`
     INSERT OR IGNORE INTO users (unique_id, email, name, password_hash, created_at)
     VALUES (?, ?, ?, ?, ?)
@@ -187,6 +195,26 @@ function seed(database: Database.Database) {
   database
     .prepare("UPDATE users SET password_hash = ? WHERE unique_id = ? AND password_hash = ?")
     .run(demoPasswordHash, demoUserId, "local-dev-password");
+}
+
+function backfillOwnerUserId(database: Database.Database) {
+  database
+    .prepare("UPDATE friends SET owner_user_id = ? WHERE owner_user_id IS NULL OR owner_user_id = ''")
+    .run(demoUserId);
+  database
+    .prepare("UPDATE groups SET owner_user_id = ? WHERE owner_user_id IS NULL OR owner_user_id = ''")
+    .run(demoUserId);
+}
+
+function markMigration(database: Database.Database, version: string) {
+  database.prepare(`
+    INSERT OR IGNORE INTO schema_migrations (version, applied_at)
+    VALUES (?, ?)
+  `).run(version, new Date().toISOString());
+}
+
+function seed(database: Database.Database) {
+  ensureDemoUser(database);
 
   const friendCount = database.prepare("SELECT COUNT(*) AS count FROM friends").get() as {
     count: number;
