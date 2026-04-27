@@ -291,6 +291,7 @@ describe("user scoped data", () => {
       name: "Lunch",
       payer: members[0],
       cost: 42,
+      currency: "JPY",
       shareMember: members,
       splitMode: "equal",
     });
@@ -310,6 +311,7 @@ describe("user scoped data", () => {
 
     sharedGroup = await groupData.getGroup(owner.uniqueId, group.uniqueId ?? "");
     payment = sharedGroup?.paymentList?.get(0);
+    assert.equal(payment?.currency, "JPY");
     assert.equal(payment?.createdBy?.email, owner.email);
     assert.equal(payment?.updatedBy?.email, member.email);
     assert.match(payment?.updatedAt ?? "", /^\d{4}-\d{2}-\d{2}T/);

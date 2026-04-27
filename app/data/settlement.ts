@@ -1,8 +1,11 @@
+import { defaultCurrency, normalizeCurrency } from "./currencies.js";
+
 export type Payment = 
 {
   name: string, 
   payer: Member, 
   cost: number, 
+  currency?: string;
   shareMember: Array<Member>;
   shareDetails?: Array<PaymentShare>;
   splitMode?: "equal" | "shares";
@@ -40,11 +43,18 @@ export type SettlementTransfer = {
 };
 
 export type GroupSettlement = {
+  currency?: string;
   memberSettlements: MemberSettlement[];
   transfers: SettlementTransfer[];
 };
 
+export type CurrencyGroupSettlement = {
+  currency: string;
+  settlement: GroupSettlement;
+};
+
 export type MemberPairBalance = {
+  currency?: string;
   member: Member;
   counterparty: Member;
   paidForCounterparty: number;
@@ -52,6 +62,10 @@ export type MemberPairBalance = {
   net: number;
   paymentCount: number;
   groupCount: number;
+};
+
+export type CurrencyMemberPairBalance = MemberPairBalance & {
+  currency: string;
 };
 
 export interface Member {
@@ -183,6 +197,13 @@ function buildTransfers(memberSettlements: MemberSettlement[]) {
 }
 
 export function calculateGroupSettlement(group: GroupRecord | null | undefined): GroupSettlement {
+  return calculateGroupSettlementForPayments(group, group?.paymentList);
+}
+
+function calculateGroupSettlementForPayments(
+  group: GroupRecord | null | undefined,
+  paymentList: PaymentList | undefined
+): GroupSettlement {
   if (!group) {
     return { memberSettlements: [], transfers: [] };
   }
@@ -201,7 +222,7 @@ export function calculateGroupSettlement(group: GroupRecord | null | undefined):
 
   (group.members ?? []).forEach((member) => ensureMember(member));
 
-  group.paymentList?.forEach((payment) => {
+  paymentList?.forEach((payment) => {
     const cost = Number(payment.cost);
     if (!Number.isFinite(cost) || cost < 0) {
       return;
@@ -250,6 +271,37 @@ export function calculateGroupSettlement(group: GroupRecord | null | undefined):
     memberSettlements,
     transfers: buildTransfers(memberSettlements),
   };
+}
+
+export function calculateGroupSettlementByCurrency(
+  group: GroupRecord | null | undefined
+): CurrencyGroupSettlement[] {
+  if (!group) {
+    return [];
+  }
+
+  const paymentsByCurrency = new Map<string, PaymentList>();
+  group.paymentList?.forEach((payment, paymentId) => {
+    const currency = normalizeCurrency(payment.currency ?? defaultCurrency);
+    if (!paymentsByCurrency.has(currency)) {
+      paymentsByCurrency.set(currency, new Map());
+    }
+    paymentsByCurrency.get(currency)?.set(paymentId, payment);
+  });
+
+  if (paymentsByCurrency.size === 0) {
+    paymentsByCurrency.set(defaultCurrency, new Map());
+  }
+
+  return Array.from(paymentsByCurrency.entries())
+    .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+    .map(([currency, paymentList]) => ({
+      currency,
+      settlement: {
+        ...calculateGroupSettlementForPayments(group, paymentList),
+        currency,
+      },
+    }));
 }
 
 export function calculateMemberPairBalance(
@@ -312,6 +364,45 @@ export function calculateMemberPairBalance(
     paymentCount,
     groupCount: groupIds.size,
   };
+}
+
+export function calculateMemberPairBalancesByCurrency(
+  groups: GroupRecord[],
+  counterparty: Member,
+  member: Member = kUser
+): CurrencyMemberPairBalance[] {
+  const groupsByCurrency = new Map<string, GroupRecord[]>();
+
+  groups.forEach((group) => {
+    if (group.settledAt) {
+      return;
+    }
+
+    group.paymentList?.forEach((payment, paymentId) => {
+      const currency = normalizeCurrency(payment.currency ?? defaultCurrency);
+      if (!groupsByCurrency.has(currency)) {
+        groupsByCurrency.set(currency, []);
+      }
+
+      const currencyGroups = groupsByCurrency.get(currency);
+      let currencyGroup = currencyGroups?.find((item) => item.uniqueId === group.uniqueId);
+      if (!currencyGroup) {
+        currencyGroup = {
+          ...group,
+          paymentList: new Map(),
+        };
+        currencyGroups?.push(currencyGroup);
+      }
+      currencyGroup.paymentList?.set(paymentId, payment);
+    });
+  });
+
+  return Array.from(groupsByCurrency.entries())
+    .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+    .map(([currency, currencyGroups]) => ({
+      ...calculateMemberPairBalance(currencyGroups, counterparty, member),
+      currency,
+    }));
 }
 
 export function getGroupPaymentMemberIds(group: GroupRecord | null | undefined) {

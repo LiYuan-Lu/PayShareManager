@@ -4,6 +4,7 @@ import { useRef, type FormEvent } from "react";
 
 import { getGroup, getMember, getPayment, updatePayment } from "../data/group-data";
 import { requireUserId } from "../data/auth.server";
+import { normalizeCurrency } from "../data/currencies";
 import type { Member, Payment, PaymentShare } from "../data/group-data";
 import PaymentFormFields, { type PaymentFormFieldsHandle } from "../components/payment-form-fields";
 
@@ -73,6 +74,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
     name: formData.get("name")?.toString() ?? "",
     payer,
     cost: Number(formData.get("cost")),
+    currency: normalizeCurrency(formData.get("currency")),
     shareMember: members,
     shareDetails,
     splitMode,

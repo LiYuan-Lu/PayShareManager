@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 
 import { requireUserId } from "../data/auth.server";
+import { defaultCurrency, formatCurrencyAmount, normalizeCurrency } from "../data/currencies";
 import { getFriends, getReceivedFriendInvites } from "../data/friend-data";
 import { getGroups, type GroupRecord } from "../data/group-data";
 import type { Payment } from "../data/settlement";
@@ -20,12 +21,19 @@ function getPayments(group: GroupRecord) {
   return Array.from(group.paymentList?.values() ?? []);
 }
 
-function getGroupTotal(payments: Payment[]) {
-  return payments.reduce((sum, payment) => sum + Number(payment.cost ?? 0), 0);
+function getTotalsByCurrency(payments: Payment[]) {
+  return payments.reduce((mapped, payment) => {
+    const currency = normalizeCurrency(payment.currency ?? defaultCurrency);
+    mapped.set(currency, (mapped.get(currency) ?? 0) + Number(payment.cost ?? 0));
+    return mapped;
+  }, new Map<string, number>());
 }
 
-function formatAmount(amount: number) {
-  return amount.toFixed(2);
+function formatTotals(totals: Map<string, number>) {
+  return Array.from(totals.entries())
+    .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+    .map(([currency, amount]) => formatCurrencyAmount(amount, currency))
+    .join(" / ") || formatCurrencyAmount(0, defaultCurrency);
 }
 
 export default function Home({
@@ -38,17 +46,19 @@ export default function Home({
       group,
       memberCount: group.members?.length ?? 0,
       paymentCount: payments.length,
-      totalPaid: getGroupTotal(payments),
+      totalsByCurrency: getTotalsByCurrency(payments),
     };
   });
   const totalPayments = groupSummaries.reduce(
     (sum, summary) => sum + summary.paymentCount,
     0
   );
-  const totalPaid = groupSummaries.reduce(
-    (sum, summary) => sum + summary.totalPaid,
-    0
-  );
+  const totalsByCurrency = groupSummaries.reduce((mapped, summary) => {
+    summary.totalsByCurrency.forEach((amount, currency) => {
+      mapped.set(currency, (mapped.get(currency) ?? 0) + amount);
+    });
+    return mapped;
+  }, new Map<string, number>());
 
   return (
     <div id="index-page" className="home-dashboard">
@@ -95,7 +105,7 @@ export default function Home({
         </div>
         <div className="home-stat-card">
           <span>Total paid</span>
-          <strong>{formatAmount(totalPaid)}</strong>
+          <strong>{formatTotals(totalsByCurrency)}</strong>
         </div>
         <Link className="home-stat-card home-stat-link" to="/friends/invites">
           <span>Invites</span>
@@ -129,7 +139,7 @@ export default function Home({
 
         {groupSummaries.length ? (
           <div className="home-group-list">
-            {groupSummaries.map(({ group, memberCount, paymentCount, totalPaid }) => (
+            {groupSummaries.map(({ group, memberCount, paymentCount, totalsByCurrency }) => (
               <Link
                 className="home-group-card"
                 key={group.uniqueId}
@@ -142,7 +152,7 @@ export default function Home({
                 <div className="home-group-meta">
                   <span>{memberCount} members</span>
                   <span>{paymentCount} payments</span>
-                  <span>{formatAmount(totalPaid)}</span>
+                  <span>{formatTotals(totalsByCurrency)}</span>
                 </div>
               </Link>
             ))}

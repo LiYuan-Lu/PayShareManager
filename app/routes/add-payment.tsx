@@ -1,6 +1,7 @@
 import { redirect } from "react-router";
 import { addPayment, getMember } from "../data/group-data";
 import { requireUserId } from "../data/auth.server";
+import { normalizeCurrency } from "../data/currencies";
 import type { Payment, Member, PaymentShare } from "../data/group-data";
 import type { Route } from "./+types/add-payment";
 
@@ -51,6 +52,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     name: formData.get("name") as string,
     payer: payer,
     cost: Number(formData.get("cost")),
+    currency: normalizeCurrency(formData.get("currency")),
     shareMember: members,
     shareDetails,
     splitMode,

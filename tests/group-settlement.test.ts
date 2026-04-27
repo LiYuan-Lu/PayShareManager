@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 
 import {
   calculateGroupSettlement,
+  calculateGroupSettlementByCurrency,
   calculateMemberPairBalance,
+  calculateMemberPairBalancesByCurrency,
   type GroupRecord,
   type Member,
   type Payment,
@@ -169,6 +171,40 @@ describe("calculateGroupSettlement", () => {
     });
     assert.deepEqual(transfers(result), []);
   });
+
+  it("keeps settlement totals separate by currency", () => {
+    const result = calculateGroupSettlementByCurrency(
+      group([
+        payment({
+          payer: alex,
+          cost: 90,
+          currency: "TWD",
+          shareMember: [alex, blair, casey],
+        }),
+        payment({
+          payer: blair,
+          cost: 3000,
+          currency: "JPY",
+          shareMember: [alex, blair],
+        }),
+      ])
+    );
+
+    assert.deepEqual(
+      result.map((item) => item.currency),
+      ["JPY", "TWD"]
+    );
+    assert.deepEqual(settlementsByName(result[0].settlement), {
+      Alex: { paid: 0, share: 1500, net: -1500 },
+      Blair: { paid: 3000, share: 1500, net: 1500 },
+      Casey: { paid: 0, share: 0, net: 0 },
+    });
+    assert.deepEqual(settlementsByName(result[1].settlement), {
+      Alex: { paid: 90, share: 30, net: 60 },
+      Blair: { paid: 0, share: 30, net: -30 },
+      Casey: { paid: 0, share: 30, net: -30 },
+    });
+  });
 });
 
 describe("calculateMemberPairBalance", () => {
@@ -237,5 +273,50 @@ describe("calculateMemberPairBalance", () => {
       paymentCount: 3,
       groupCount: 2,
     });
+  });
+
+  it("nets direct friend balances separately by currency", () => {
+    const trip = group(
+      [
+        payment({
+          payer: you,
+          cost: 90,
+          currency: "TWD",
+          shareMember: [you, alex],
+        }),
+        payment({
+          payer: alex,
+          cost: 3000,
+          currency: "JPY",
+          shareMember: [you, alex],
+        }),
+      ],
+      [you, alex]
+    );
+
+    const result = calculateMemberPairBalancesByCurrency([trip], alex, you);
+
+    assert.deepEqual(
+      result.map((item) => ({
+        currency: item.currency,
+        paidForCounterparty: item.paidForCounterparty,
+        counterpartyPaidForMember: item.counterpartyPaidForMember,
+        net: item.net,
+      })),
+      [
+        {
+          currency: "JPY",
+          paidForCounterparty: 0,
+          counterpartyPaidForMember: 1500,
+          net: -1500,
+        },
+        {
+          currency: "TWD",
+          paidForCounterparty: 45,
+          counterpartyPaidForMember: 0,
+          net: 45,
+        },
+      ]
+    );
   });
 });

@@ -5,11 +5,18 @@ import {
 } from "react";
 import Select from "react-select";
 
+import {
+  defaultCurrency,
+  formatCurrencyAmount,
+  normalizeCurrency,
+  supportedCurrencies,
+} from "../data/currencies";
 import type { Member, Payment } from "../data/settlement";
 
 type SelectOption = { label: string; value: string };
 type SplitMode = "equal" | "shares";
 type SplitModeOption = { label: string; value: SplitMode };
+type CurrencyOption = { label: string; value: string };
 
 type PaymentFormErrors = {
   cost?: string;
@@ -62,6 +69,10 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
       { label: "Equal", value: "equal" },
       { label: "By Shares", value: "shares" },
     ];
+    const currencyOptions: CurrencyOption[] = supportedCurrencies.map((currency) => ({
+      label: currency.label,
+      value: currency.code,
+    }));
     const memberOptions: SelectOption[] = members.map((member) => ({
       label: member.name,
       value: member.uniqueId,
@@ -81,6 +92,11 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
       useState<SelectOption[]>(initialShareMembers);
     const [splitMode, setSplitMode] = useState<SplitMode>(
       payment?.splitMode === "shares" ? "shares" : "equal"
+    );
+    const [selectedCurrency, setSelectedCurrency] = useState<CurrencyOption>(
+      currencyOptions.find(
+        (option) => option.value === normalizeCurrency(payment?.currency ?? defaultCurrency)
+      ) ?? currencyOptions[0]
     );
     const selectedSplitMode =
       splitModeOptions.find((option) => option.value === splitMode) ?? splitModeOptions[0];
@@ -232,6 +248,19 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
         </p>
         {formErrors.cost ? <p className="field-error">{formErrors.cost}</p> : null}
         <p>
+          <span>Currency</span>
+          <Select
+            name="currency"
+            options={currencyOptions}
+            classNamePrefix="rs"
+            value={selectedCurrency}
+            onChange={(option) => {
+              setSelectedCurrency(option ?? currencyOptions[0]);
+            }}
+            isSearchable={false}
+          />
+        </p>
+        <p>
           <span>Date</span>
           <input
             aria-label="Date"
@@ -310,7 +339,7 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
                   </button>
                 </div>
                 <span className="share-estimate">
-                  ${getShareEstimate(member.value).toFixed(2)}
+                  {formatCurrencyAmount(getShareEstimate(member.value), selectedCurrency.value)}
                 </span>
               </p>
             ))}

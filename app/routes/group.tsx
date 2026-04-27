@@ -3,8 +3,9 @@ import { useState, useRef, useEffect, type FormEvent } from "react";
 
 import { getGroup, settleGroup } from "../data/group-data";
 import { requireUserId } from "../data/auth.server";
+import { defaultCurrency, formatCurrencyAmount, normalizeCurrency } from "../data/currencies";
 import {
-  calculateGroupSettlement,
+  calculateGroupSettlementByCurrency,
   type Member,
   type Payment,
   type PaymentList,
@@ -74,14 +75,20 @@ export default function Group({
     setModalOpen(true);
   };
 
-  const settlement = calculateGroupSettlement(group);
+  const settlementsByCurrency = calculateGroupSettlementByCurrency(group);
   const payments = Array.from(paymentList?.entries() ?? []);
   const memberCount = Array.isArray(group.members) ? group.members.length : 0;
-  const totalPaid = payments.reduce(
-    (sum, [, payment]) => sum + Number(payment.cost ?? 0),
-    0
-  );
-  const formatAmount = (amount: number) => amount.toFixed(2);
+  const totalsByCurrency = payments.reduce((mapped, [, payment]) => {
+    const currency = normalizeCurrency(payment.currency ?? defaultCurrency);
+    mapped.set(currency, (mapped.get(currency) ?? 0) + Number(payment.cost ?? 0));
+    return mapped;
+  }, new Map<string, number>());
+  const totalPaidLabel = Array.from(totalsByCurrency.entries())
+    .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+    .map(([currency, amount]) => formatCurrencyAmount(amount, currency))
+    .join(" / ") || formatCurrencyAmount(0, defaultCurrency);
+  const formatAmount = (amount: number, currency = defaultCurrency) =>
+    formatCurrencyAmount(amount, currency);
   const settledDate = group.settledAt
     ? new Date(group.settledAt).toLocaleDateString()
     : null;
@@ -108,7 +115,7 @@ export default function Group({
     if (!viewerShare) {
       return 0;
     }
-    return payment.cost * (viewerShare.shares / totalShares);
+    return Number(payment.cost ?? 0) * (viewerShare.shares / totalShares);
   };
   const getPaymentSummary = (payment: Payment) => {
     const isYouPayer = payment.payer.uniqueId === viewerMemberId;
@@ -125,10 +132,10 @@ export default function Group({
       ? -(Number(payment.cost ?? 0) - viewerShareAmount)
       : viewerShareAmount;
     if (youShouldPay > 0) {
-      return `you borrowed ${youShouldPay.toFixed(2)}`;
+      return `you borrowed ${formatAmount(youShouldPay, payment.currency)}`;
     }
     if (youShouldPay < 0) {
-      return `you lent ${Math.abs(youShouldPay).toFixed(2)}`;
+      return `you lent ${formatAmount(Math.abs(youShouldPay), payment.currency)}`;
     }
     return "not involved";
   };
@@ -221,7 +228,7 @@ export default function Group({
           </div>
           <div className="metric-card">
             <span>Total paid</span>
-            <strong>{formatAmount(totalPaid)}</strong>
+            <strong>{totalPaidLabel}</strong>
           </div>
         </section>
 
@@ -276,7 +283,7 @@ export default function Group({
                     </div>
                     <div className="payment-detail">
                       <span>{payment.payer.name}</span>
-                      <span>paid {formatAmount(payment.cost)}</span>
+                      <span>paid {formatAmount(payment.cost, payment.currency)}</span>
                     </div>
                     <div className="payment-audit">
                       {payment.createdBy ? (
@@ -336,49 +343,59 @@ export default function Group({
           </div>
           <div className="settlement-grid">
             <div className="settlement-card">
-              <div className="settlement-table settlement-table-header">
-                <div>Member</div>
-                <div>Paid</div>
-                <div>Share</div>
-                <div>Net</div>
-              </div>
-              {settlement.memberSettlements.map((item) => (
-                <div className="settlement-table" key={item.member.uniqueId}>
-                  <div>{item.member.name}</div>
-                  <div>{formatAmount(item.paid)}</div>
-                  <div>{formatAmount(item.share)}</div>
-                  <div
-                    className={
-                      item.net > 0
-                        ? "settlement-net-positive"
-                        : item.net < 0
-                        ? "settlement-net-negative"
-                        : "settlement-net-zero"
-                    }
-                  >
-                    {formatAmount(item.net)}
+              {settlementsByCurrency.map(({ currency, settlement }) => (
+                <div className="settlement-currency-block" key={currency}>
+                  <h3>{currency}</h3>
+                  <div className="settlement-table settlement-table-header">
+                    <div>Member</div>
+                    <div>Paid</div>
+                    <div>Share</div>
+                    <div>Net</div>
                   </div>
+                  {settlement.memberSettlements.map((item) => (
+                    <div className="settlement-table" key={item.member.uniqueId}>
+                      <div>{item.member.name}</div>
+                      <div>{formatAmount(item.paid, currency)}</div>
+                      <div>{formatAmount(item.share, currency)}</div>
+                      <div
+                        className={
+                          item.net > 0
+                            ? "settlement-net-positive"
+                            : item.net < 0
+                            ? "settlement-net-negative"
+                            : "settlement-net-zero"
+                        }
+                      >
+                        {formatAmount(item.net, currency)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
 
             <div className="settlement-card transfer-list">
               <h3>Who pays whom</h3>
-              {settlement.transfers.length ? (
-                settlement.transfers.map((transfer, index) => (
-                  <div className="settlement-transfer-item" key={index}>
-                    <div>
-                      <strong>{transfer.from.name}</strong>
-                      <span>pays {transfer.to.name}</span>
-                    </div>
-                    <strong className="settlement-transfer-amount">
-                      {formatAmount(transfer.amount)}
-                    </strong>
-                  </div>
-                ))
-              ) : (
-                <p className="settlement-empty">All settled.</p>
-              )}
+              {settlementsByCurrency.map(({ currency, settlement }) => (
+                <div className="settlement-currency-block" key={currency}>
+                  <h4>{currency}</h4>
+                  {settlement.transfers.length ? (
+                    settlement.transfers.map((transfer, index) => (
+                      <div className="settlement-transfer-item" key={index}>
+                        <div>
+                          <strong>{transfer.from.name}</strong>
+                          <span>pays {transfer.to.name}</span>
+                        </div>
+                        <strong className="settlement-transfer-amount">
+                          {formatAmount(transfer.amount, currency)}
+                        </strong>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="settlement-empty">All settled.</p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </section>

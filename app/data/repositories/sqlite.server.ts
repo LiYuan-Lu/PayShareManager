@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+import { defaultCurrency, normalizeCurrency } from "../currencies.js";
 import type { FriendMutation } from "../friend-data";
 import type {
   GroupMutation,
@@ -69,6 +70,7 @@ type DbPayment = {
   payer_id: string;
   payer_name: string;
   cost: number;
+  currency: string | null;
   split_mode: "equal" | "shares" | null;
   created_at: string | null;
   created_by_user_id: string | null;
@@ -183,6 +185,7 @@ function migrate(database: Database.Database) {
       payer_id TEXT NOT NULL,
       payer_name TEXT NOT NULL,
       cost REAL NOT NULL,
+      currency TEXT NOT NULL DEFAULT '${defaultCurrency}',
       split_mode TEXT NOT NULL DEFAULT 'equal',
       created_at TEXT,
       created_by_user_id TEXT,
@@ -216,6 +219,7 @@ function migrate(database: Database.Database) {
   ensureColumn(database, "payments", "created_by_user_id", "TEXT");
   ensureColumn(database, "payments", "updated_by_user_id", "TEXT");
   ensureColumn(database, "payments", "updated_at", "TEXT");
+  ensureColumn(database, "payments", "currency", `TEXT NOT NULL DEFAULT '${defaultCurrency}'`);
   backfillOwnerUserId(database);
   backfillAccountLinks(database);
   backfillPaymentAudit(database);
@@ -225,6 +229,7 @@ function migrate(database: Database.Database) {
   markMigration(database, "20260427_friend_invites");
   markMigration(database, "20260427_shared_group_members");
   markMigration(database, "20260427_payment_audit");
+  markMigration(database, "20260427_payment_currency");
 }
 
 function ensureColumn(
@@ -530,6 +535,7 @@ function mapGroup(row: DbGroup, viewerUserId: string): GroupRecord {
         payments.payer_id,
         payments.payer_name,
         payments.cost,
+        payments.currency,
         payments.split_mode,
         payments.created_at,
         payments.created_by_user_id,
@@ -595,6 +601,7 @@ function mapPayment(groupId: string, row: DbPayment, membersById: Map<string, Me
       name: membersById.get(row.payer_id)?.name ?? row.payer_name,
     },
     cost: row.cost,
+    currency: normalizeCurrency(row.currency ?? defaultCurrency),
     shareMember: shareDetails.map((share) => share.member),
     shareDetails,
     splitMode: row.split_mode === "shares" ? "shares" : "equal",
@@ -671,6 +678,7 @@ function savePayment(
       payer_id,
       payer_name,
       cost,
+      currency,
       split_mode,
       created_at,
       created_by_user_id,
@@ -678,7 +686,7 @@ function savePayment(
       updated_at,
       you_should_pay
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     groupId,
     paymentId,
@@ -686,6 +694,7 @@ function savePayment(
     payment.payer.uniqueId,
     payment.payer.name,
     payment.cost,
+    normalizeCurrency(payment.currency ?? defaultCurrency),
     payment.splitMode ?? "equal",
     payment.createdAt ?? null,
     createdByUserId,

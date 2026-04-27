@@ -5,7 +5,8 @@ import type { FriendMutation } from "../data/friend-data";
 import { deleteFriend, getFriend, getFriendUsage, updateFriend } from "../data/friend-data";
 import { requireUserId } from "../data/auth.server";
 import { getGroups } from "../data/group-data";
-import { calculateMemberPairBalance } from "../data/settlement";
+import { formatCurrencyAmount } from "../data/currencies";
+import { calculateMemberPairBalancesByCurrency } from "../data/settlement";
 import type { Route } from "./+types/friend";
 
 type FriendActionData = {
@@ -57,26 +58,54 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     getFriendUsage(userId, params.uniqueId),
     getGroups(userId),
   ]);
-  const balance = calculateMemberPairBalance(groups, {
+  const directGroupIds = new Set<string>();
+  groups.forEach((group) => {
+    const groupId = group.uniqueId;
+    if (group.settledAt || !groupId) {
+      return;
+    }
+    group.paymentList?.forEach((payment) => {
+      const shareMembers = payment.shareDetails?.length
+        ? payment.shareDetails.map((item) => item.member)
+        : payment.shareMember;
+      const youPaidForFriend =
+        payment.payer.uniqueId === "0" &&
+        shareMembers.some((member) => member.uniqueId === params.uniqueId);
+      const friendPaidForYou =
+        payment.payer.uniqueId === params.uniqueId &&
+        shareMembers.some((member) => member.uniqueId === "0");
+      if (youPaidForFriend || friendPaidForYou) {
+        directGroupIds.add(groupId);
+      }
+    });
+  });
+  const balances = calculateMemberPairBalancesByCurrency(groups, {
     uniqueId: params.uniqueId,
     name: friend.name ?? "",
   });
-  return { friend, usage, balance };
+  return { friend, usage, balances, balanceGroupCount: directGroupIds.size };
 }
 
 export default function Friend({
   loaderData,
 }: Route.ComponentProps) {
-  const { friend, usage, balance } = loaderData;
+  const { friend, usage, balances, balanceGroupCount } = loaderData;
   const actionData = useActionData<FriendActionData>();
   const isDeleteDisabled = usage.groupCount > 0 || usage.paymentCount > 0;
-  const balanceAmount = Math.abs(balance.net).toFixed(2);
+  const activeBalances = balances.filter((balance) => Math.abs(balance.net) > 0.005);
   const balanceLabel =
-    balance.net > 0
-      ? `${friend.name} owes you`
-      : balance.net < 0
-        ? `You owe ${friend.name}`
-        : "All settled";
+    activeBalances.length === 0
+      ? "All settled"
+      : activeBalances.length === 1
+        ? activeBalances[0].net > 0
+          ? `${friend.name} owes you`
+          : `You owe ${friend.name}`
+        : "Open balances by currency";
+  const balanceAmount =
+    activeBalances
+      .map((balance) => formatCurrencyAmount(Math.abs(balance.net), balance.currency))
+      .join(" / ") || formatCurrencyAmount(0, "TWD");
+  const paymentCount = balances.reduce((sum, balance) => sum + balance.paymentCount, 0);
 
   return (
     <div id="friend" className="friend-shell">
@@ -99,8 +128,8 @@ export default function Friend({
           </div>
           <div className="friend-metric friend-balance-metric">
             <span>Balance</span>
-            <strong className={balance.net < 0 ? "friend-balance-negative" : ""}>
-              ${balanceAmount}
+            <strong className={activeBalances.some((balance) => balance.net < 0) ? "friend-balance-negative" : ""}>
+              {balanceAmount}
             </strong>
           </div>
         </div>
@@ -111,20 +140,31 @@ export default function Friend({
           <p className="friend-eyebrow">Between you two</p>
           <h2>{balanceLabel}</h2>
           <p>
-            Based on {balance.paymentCount} direct payment
-            {balance.paymentCount === 1 ? "" : "s"} across {balance.groupCount} group
-            {balance.groupCount === 1 ? "" : "s"}.
+            Based on {paymentCount} direct payment
+            {paymentCount === 1 ? "" : "s"} across {balanceGroupCount} group
+            {balanceGroupCount === 1 ? "" : "s"}.
           </p>
         </div>
         <div className="friend-balance-breakdown">
-          <div>
-            <span>You paid for {friend.name}</span>
-            <strong>${balance.paidForCounterparty.toFixed(2)}</strong>
-          </div>
-          <div>
-            <span>{friend.name} paid for you</span>
-            <strong>${balance.counterpartyPaidForMember.toFixed(2)}</strong>
-          </div>
+          {balances.length ? (
+            balances.map((balance) => (
+              <div key={balance.currency}>
+                <span>{balance.currency}</span>
+                <strong>
+                  {balance.net > 0
+                    ? `${friend.name} owes you ${formatCurrencyAmount(balance.net, balance.currency)}`
+                    : balance.net < 0
+                      ? `You owe ${friend.name} ${formatCurrencyAmount(Math.abs(balance.net), balance.currency)}`
+                      : "All settled"}
+                </strong>
+              </div>
+            ))
+          ) : (
+            <div>
+              <span>No shared payments</span>
+              <strong>All settled</strong>
+            </div>
+          )}
         </div>
       </section>
 

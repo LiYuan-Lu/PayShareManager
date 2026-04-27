@@ -1,6 +1,7 @@
 import { matchSorter } from "match-sorter";
 // @ts-expect-error - no types, but it's a tiny function
 import sortBy from "sort-by";
+import { defaultCurrency, normalizeCurrency } from "./currencies.js";
 import type { DataRepositories } from "./repositories/types";
 import {
   calculateYouShouldPay,
@@ -13,10 +14,14 @@ import {
 
 export {
   calculateGroupSettlement,
+  calculateGroupSettlementByCurrency,
+  calculateMemberPairBalancesByCurrency,
   getGroupPaymentMemberIds,
   type GroupMutation,
   type GroupRecord,
   type GroupSettlement,
+  type CurrencyGroupSettlement,
+  type CurrencyMemberPairBalance,
   type Member,
   type MemberSettlement,
   type Payment,
@@ -78,6 +83,7 @@ export async function settleGroup(ownerUserId: string, uniqueId: string) {
 export async function addPayment(ownerUserId: string, uniqueId: string, payment: Payment) {
   const paymentToSave: Payment = {
     ...payment,
+    currency: normalizeCurrency(payment.currency ?? defaultCurrency),
     createdAt: payment.createdAt ?? new Date().toISOString(),
   };
   paymentToSave.youShouldPay = calculateYouShouldPay(paymentToSave);
@@ -124,6 +130,7 @@ export async function updatePayment(ownerUserId: string, uniqueId: string, payme
   const updatedPayment: Payment = {
     ...existingPayment,
     ...payment,
+    currency: normalizeCurrency(payment.currency ?? existingPayment.currency ?? defaultCurrency),
     createdAt: payment.createdAt ?? existingPayment.createdAt ?? new Date().toISOString(),
   };
   updatedPayment.youShouldPay = calculateYouShouldPay(updatedPayment);
