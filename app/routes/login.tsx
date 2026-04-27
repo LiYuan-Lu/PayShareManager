@@ -1,5 +1,14 @@
-import { Form, Link, redirect, useActionData, useSearchParams } from "react-router";
+import {
+  Form,
+  Link,
+  redirect,
+  useActionData,
+  useNavigation,
+  useSearchParams,
+} from "react-router";
+import { useState } from "react";
 
+import { PasswordVisibilityIcon } from "../components/password-visibility-icon";
 import { createUserSession, getCurrentUser, loginUser } from "../data/auth.server";
 import type { Route } from "./+types/login";
 
@@ -41,8 +50,11 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Login() {
   const actionData = useActionData<AuthActionData>();
+  const navigation = useNavigation();
   const [searchParams] = useSearchParams();
   const redirectTo = getSafeRedirectTo(searchParams.get("redirectTo"));
+  const [showPassword, setShowPassword] = useState(false);
+  const isSubmitting = navigation.state === "submitting";
 
   return (
     <main className="auth-page">
@@ -61,10 +73,32 @@ export default function Login() {
         </label>
         <label className="auth-field">
           <span>Password</span>
-          <input autoComplete="current-password" name="password" placeholder="Password" required type="password" />
+          <div className="auth-password-control">
+            <input
+              autoComplete="current-password"
+              name="password"
+              placeholder="Password"
+              required
+              type={showPassword ? "text" : "password"}
+            />
+            <button
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="auth-password-toggle"
+              onClick={() => setShowPassword((value) => !value)}
+              type="button"
+            >
+              <PasswordVisibilityIcon visible={showPassword} />
+            </button>
+          </div>
         </label>
-        {actionData?.error ? <p className="field-error">{actionData.error}</p> : null}
-        <button type="submit">Sign in</button>
+        {actionData?.error ? (
+          <div className="auth-alert" role="alert">
+            {actionData.error}
+          </div>
+        ) : null}
+        <button disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Signing in..." : "Sign in"}
+        </button>
         <p className="auth-switch">
           New here? <Link to={`/register?redirectTo=${encodeURIComponent(redirectTo)}`}>Create an account</Link>
         </p>

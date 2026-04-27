@@ -1,5 +1,14 @@
-import { Form, Link, redirect, useActionData, useSearchParams } from "react-router";
+import {
+  Form,
+  Link,
+  redirect,
+  useActionData,
+  useNavigation,
+  useSearchParams,
+} from "react-router";
+import { useState } from "react";
 
+import { PasswordVisibilityIcon } from "../components/password-visibility-icon";
 import { createUserSession, getCurrentUser, registerUser } from "../data/auth.server";
 import type { Route } from "./+types/register";
 
@@ -28,10 +37,14 @@ export async function action({ request }: Route.ActionArgs) {
   const email = formData.get("email")?.toString() ?? "";
   const name = formData.get("name")?.toString() ?? "";
   const password = formData.get("password")?.toString() ?? "";
+  const confirmPassword = formData.get("confirmPassword")?.toString() ?? "";
   const redirectTo = getSafeRedirectTo(formData.get("redirectTo"));
 
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters." } satisfies AuthActionData;
+  }
+  if (password !== confirmPassword) {
+    return { error: "Passwords do not match." } satisfies AuthActionData;
   }
 
   try {
@@ -46,8 +59,12 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Register() {
   const actionData = useActionData<AuthActionData>();
+  const navigation = useNavigation();
   const [searchParams] = useSearchParams();
   const redirectTo = getSafeRedirectTo(searchParams.get("redirectTo"));
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const isSubmitting = navigation.state === "submitting";
 
   return (
     <main className="auth-page">
@@ -70,10 +87,52 @@ export default function Register() {
         </label>
         <label className="auth-field">
           <span>Password</span>
-          <input autoComplete="new-password" name="password" placeholder="At least 8 characters" required type="password" />
+          <div className="auth-password-control">
+            <input
+              autoComplete="new-password"
+              name="password"
+              placeholder="At least 8 characters"
+              required
+              type={showPassword ? "text" : "password"}
+            />
+            <button
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="auth-password-toggle"
+              onClick={() => setShowPassword((value) => !value)}
+              type="button"
+            >
+              <PasswordVisibilityIcon visible={showPassword} />
+            </button>
+          </div>
         </label>
-        {actionData?.error ? <p className="field-error">{actionData.error}</p> : null}
-        <button type="submit">Create account</button>
+        <label className="auth-field">
+          <span>Confirm Password</span>
+          <div className="auth-password-control">
+            <input
+              autoComplete="new-password"
+              name="confirmPassword"
+              placeholder="Re-enter password"
+              required
+              type={showConfirmPassword ? "text" : "password"}
+            />
+            <button
+              aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              className="auth-password-toggle"
+              onClick={() => setShowConfirmPassword((value) => !value)}
+              type="button"
+            >
+              <PasswordVisibilityIcon visible={showConfirmPassword} />
+            </button>
+          </div>
+        </label>
+        {actionData?.error ? (
+          <div className="auth-alert" role="alert">
+            {actionData.error}
+          </div>
+        ) : null}
+        <button disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Creating account..." : "Create account"}
+        </button>
         <p className="auth-switch">
           Already have an account? <Link to={`/login?redirectTo=${encodeURIComponent(redirectTo)}`}>Sign in</Link>
         </p>
