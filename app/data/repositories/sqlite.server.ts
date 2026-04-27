@@ -267,9 +267,16 @@ function migrate(database: Database.Database) {
     );
   `);
 
-  ensureDemoUser(database);
+  const hasConfiguredAdmin = hasConfiguredAdminCredentials();
+  if (hasConfiguredAdmin) {
+    removeDemoUser(database);
+  } else {
+    ensureDemoUser(database);
+  }
   ensureColumn(database, "users", "role", "TEXT NOT NULL DEFAULT 'user'");
-  database.prepare("UPDATE users SET role = 'admin' WHERE unique_id = ?").run(demoUserId);
+  if (!hasConfiguredAdmin) {
+    database.prepare("UPDATE users SET role = 'admin' WHERE unique_id = ?").run(demoUserId);
+  }
   provisionConfiguredAdmin(database);
   ensureColumn(database, "friends", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
   ensureColumn(database, "friends", "friend_user_id", "TEXT");
@@ -319,6 +326,17 @@ function ensureDemoUser(database: Database.Database) {
   database
     .prepare("UPDATE users SET password_hash = ? WHERE unique_id = ? AND password_hash = ?")
     .run(demoPasswordHash, demoUserId, "local-dev-password");
+}
+
+function hasConfiguredAdminCredentials() {
+  return Boolean(
+    (process.env.PAYSHARE_ADMIN_EMAIL ?? "").trim() &&
+      (process.env.PAYSHARE_ADMIN_PASSWORD ?? "").trim()
+  );
+}
+
+function removeDemoUser(database: Database.Database) {
+  database.prepare("DELETE FROM users WHERE unique_id = ?").run(demoUserId);
 }
 
 function hashConfiguredAdminPassword(password: string) {
@@ -445,6 +463,10 @@ function markMigration(database: Database.Database, version: string) {
 }
 
 function seed(database: Database.Database) {
+  if (hasConfiguredAdminCredentials()) {
+    return;
+  }
+
   ensureDemoUser(database);
 
   const friendCount = database.prepare("SELECT COUNT(*) AS count FROM friends").get() as {

@@ -57,9 +57,11 @@ PAYSHARE_ADMIN_PASSWORD=use-a-long-password
 When the container starts, the app creates this account as admin if it does not
 exist. If the email already exists, it is promoted to admin and the password is
 updated from `PAYSHARE_ADMIN_PASSWORD`. The password must be at least 8
-characters.
+characters. When both admin variables are set, the built-in demo account is not
+created and any existing demo account is removed.
 
-The built-in demo admin still exists for local testing:
+If no admin variables are set, the built-in demo admin is available for local
+testing:
 
 ```text
 demo@payshare.local / password123

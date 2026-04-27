@@ -18,5 +18,9 @@ describe("admin provisioning", () => {
     const admin = await auth.loginUser("owner@example.com", "owner-password");
     assert.equal(admin.email, "owner@example.com");
     assert.equal(admin.role, "admin");
+    await assert.rejects(
+      () => auth.loginUser("demo@payshare.local", "password123"),
+      /Invalid email or password/
+    );
   });
 });
