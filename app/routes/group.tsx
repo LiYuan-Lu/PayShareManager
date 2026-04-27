@@ -87,6 +87,13 @@ export default function Group({
     : null;
   const formatPaymentDate = (dateStr?: string) =>
     dateStr ? new Date(dateStr).toLocaleDateString() : "-";
+  const formatPaymentAuditDate = (dateStr?: string) =>
+    dateStr
+      ? new Date(dateStr).toLocaleString([], {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : "";
   const viewerMemberId = group.viewerMemberId ?? "0";
   const getViewerShareAmount = (payment: Payment) => {
     const shareDetails =
@@ -270,6 +277,17 @@ export default function Group({
                     <div className="payment-detail">
                       <span>{payment.payer.name}</span>
                       <span>paid {formatAmount(payment.cost)}</span>
+                    </div>
+                    <div className="payment-audit">
+                      {payment.createdBy ? (
+                        <span>Added by {payment.createdBy.name}</span>
+                      ) : null}
+                      {payment.updatedBy && payment.updatedAt ? (
+                        <span>
+                          Updated by {payment.updatedBy.name} at{" "}
+                          {formatPaymentAuditDate(payment.updatedAt)}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div className={`payment-summary ${getSummaryToneClass(payment)}`}>

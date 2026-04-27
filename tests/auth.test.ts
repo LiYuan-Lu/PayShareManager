@@ -255,6 +255,65 @@ describe("user scoped data", () => {
     assert.equal(sharedGroup?.viewerMemberId, ownerFriend.uniqueId);
     assert.ok(sharedGroup?.members?.some((item) => item.name === "You"));
   });
+
+  it("tracks who created and last updated a shared payment", async () => {
+    const owner = await auth.registerUser({
+      email: "payment-owner@example.com",
+      name: "Payment Owner",
+      password: "password123",
+    });
+    const member = await auth.registerUser({
+      email: "payment-member@example.com",
+      name: "Payment Member",
+      password: "password123",
+    });
+
+    const invite = await friendData.createFriendInvite(owner.uniqueId, member.email);
+    await friendData.respondToFriendInvite(member.uniqueId, invite.uniqueId, "accepted");
+    const ownerFriend = (await friendData.getFriends(owner.uniqueId)).find(
+      (friend) => friend.email === member.email
+    );
+    assert.ok(ownerFriend?.uniqueId);
+
+    const group = await groupData.createEmptyGroup(owner.uniqueId);
+    const members = [
+      ...(group.members ?? []),
+      { uniqueId: ownerFriend.uniqueId, name: ownerFriend.name },
+    ];
+    await groupData.updateGroup(
+      owner.uniqueId,
+      group.uniqueId ?? "",
+      { name: "Shared Payment Audit" },
+      members
+    );
+
+    await groupData.addPayment(owner.uniqueId, group.uniqueId ?? "", {
+      name: "Lunch",
+      payer: members[0],
+      cost: 42,
+      shareMember: members,
+      splitMode: "equal",
+    });
+
+    let sharedGroup = await groupData.getGroup(member.uniqueId, group.uniqueId ?? "");
+    let payment = sharedGroup?.paymentList?.get(0);
+    assert.equal(payment?.createdBy?.email, owner.email);
+    assert.equal(payment?.updatedBy, undefined);
+
+    await groupData.updatePayment(member.uniqueId, group.uniqueId ?? "", 0, {
+      name: "Lunch and drinks",
+      payer: members[1],
+      cost: 48,
+      shareMember: members,
+      splitMode: "equal",
+    });
+
+    sharedGroup = await groupData.getGroup(owner.uniqueId, group.uniqueId ?? "");
+    payment = sharedGroup?.paymentList?.get(0);
+    assert.equal(payment?.createdBy?.email, owner.email);
+    assert.equal(payment?.updatedBy?.email, member.email);
+    assert.match(payment?.updatedAt ?? "", /^\d{4}-\d{2}-\d{2}T/);
+  });
 });
 
 describe("friend invites", () => {

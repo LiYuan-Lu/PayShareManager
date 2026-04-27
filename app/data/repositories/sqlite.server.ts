@@ -71,6 +71,13 @@ type DbPayment = {
   cost: number;
   split_mode: "equal" | "shares" | null;
   created_at: string | null;
+  created_by_user_id: string | null;
+  created_by_email: string | null;
+  created_by_name: string | null;
+  updated_by_user_id: string | null;
+  updated_by_email: string | null;
+  updated_by_name: string | null;
+  updated_at: string | null;
   you_should_pay: number | null;
 };
 
@@ -178,9 +185,14 @@ function migrate(database: Database.Database) {
       cost REAL NOT NULL,
       split_mode TEXT NOT NULL DEFAULT 'equal',
       created_at TEXT,
+      created_by_user_id TEXT,
+      updated_by_user_id TEXT,
+      updated_at TEXT,
       you_should_pay REAL,
       PRIMARY KEY (group_id, payment_id),
-      FOREIGN KEY (group_id) REFERENCES groups(unique_id) ON DELETE CASCADE
+      FOREIGN KEY (group_id) REFERENCES groups(unique_id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(unique_id) ON DELETE SET NULL,
+      FOREIGN KEY (updated_by_user_id) REFERENCES users(unique_id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS payment_shares (
@@ -201,13 +213,18 @@ function migrate(database: Database.Database) {
   ensureColumn(database, "groups", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
   ensureColumn(database, "groups", "settled_at", "TEXT");
   ensureColumn(database, "group_members", "member_user_id", "TEXT");
+  ensureColumn(database, "payments", "created_by_user_id", "TEXT");
+  ensureColumn(database, "payments", "updated_by_user_id", "TEXT");
+  ensureColumn(database, "payments", "updated_at", "TEXT");
   backfillOwnerUserId(database);
   backfillAccountLinks(database);
+  backfillPaymentAudit(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date().toISOString());
   markMigration(database, "20260427_auth_user_scope");
   markMigration(database, "20260427_group_settlement_state");
   markMigration(database, "20260427_friend_invites");
   markMigration(database, "20260427_shared_group_members");
+  markMigration(database, "20260427_payment_audit");
 }
 
 function ensureColumn(
@@ -296,6 +313,18 @@ function backfillAccountLinks(database: Database.Database) {
         WHERE groups.unique_id = group_members.group_id
           AND friends.friend_user_id IS NOT NULL
       )
+  `).run();
+}
+
+function backfillPaymentAudit(database: Database.Database) {
+  database.prepare(`
+    UPDATE payments
+    SET created_by_user_id = (
+      SELECT groups.owner_user_id
+      FROM groups
+      WHERE groups.unique_id = payments.group_id
+    )
+    WHERE created_by_user_id IS NULL OR created_by_user_id = ''
   `).run();
 }
 
@@ -495,10 +524,27 @@ function mapGroup(row: DbGroup, viewerUserId: string): GroupRecord {
   const membersById = new Map(displayMembers.map((member) => [member.uniqueId, member]));
   const payments = database
     .prepare(`
-      SELECT payment_id, name, payer_id, payer_name, cost, split_mode, created_at, you_should_pay
+      SELECT
+        payments.payment_id,
+        payments.name,
+        payments.payer_id,
+        payments.payer_name,
+        payments.cost,
+        payments.split_mode,
+        payments.created_at,
+        payments.created_by_user_id,
+        creator.email AS created_by_email,
+        creator.name AS created_by_name,
+        payments.updated_by_user_id,
+        updater.email AS updated_by_email,
+        updater.name AS updated_by_name,
+        payments.updated_at,
+        payments.you_should_pay
       FROM payments
-      WHERE group_id = ?
-      ORDER BY payment_id
+      LEFT JOIN users creator ON creator.unique_id = payments.created_by_user_id
+      LEFT JOIN users updater ON updater.unique_id = payments.updated_by_user_id
+      WHERE payments.group_id = ?
+      ORDER BY payments.payment_id
     `)
     .all(row.unique_id) as DbPayment[];
 
@@ -553,6 +599,23 @@ function mapPayment(groupId: string, row: DbPayment, membersById: Map<string, Me
     shareDetails,
     splitMode: row.split_mode === "shares" ? "shares" : "equal",
     createdAt: row.created_at ?? undefined,
+    createdBy:
+      row.created_by_user_id && row.created_by_email && row.created_by_name
+        ? {
+            uniqueId: row.created_by_user_id,
+            email: row.created_by_email,
+            name: row.created_by_name,
+          }
+        : undefined,
+    updatedBy:
+      row.updated_by_user_id && row.updated_by_email && row.updated_by_name
+        ? {
+            uniqueId: row.updated_by_user_id,
+            email: row.updated_by_email,
+            name: row.updated_by_name,
+          }
+        : undefined,
+    updatedAt: row.updated_at ?? undefined,
     youShouldPay: row.you_should_pay ?? undefined,
   };
 }
@@ -580,7 +643,26 @@ function saveMembers(
   });
 }
 
-function savePayment(database: Database.Database, groupId: string, paymentId: number, payment: Payment) {
+function savePayment(
+  database: Database.Database,
+  groupId: string,
+  paymentId: number,
+  payment: Payment,
+  actorUserId: string,
+  mode: "create" | "update"
+) {
+  const existingAudit = database
+    .prepare(`
+      SELECT created_by_user_id
+      FROM payments
+      WHERE group_id = ? AND payment_id = ?
+    `)
+    .get(groupId, paymentId) as { created_by_user_id: string | null } | undefined;
+  const createdByUserId =
+    mode === "create" ? actorUserId : existingAudit?.created_by_user_id ?? actorUserId;
+  const updatedByUserId = mode === "update" ? actorUserId : null;
+  const updatedAt = mode === "update" ? new Date().toISOString() : null;
+
   database.prepare(`
     INSERT OR REPLACE INTO payments (
       group_id,
@@ -591,9 +673,12 @@ function savePayment(database: Database.Database, groupId: string, paymentId: nu
       cost,
       split_mode,
       created_at,
+      created_by_user_id,
+      updated_by_user_id,
+      updated_at,
       you_should_pay
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     groupId,
     paymentId,
@@ -603,6 +688,9 @@ function savePayment(database: Database.Database, groupId: string, paymentId: nu
     payment.cost,
     payment.splitMode ?? "equal",
     payment.createdAt ?? null,
+    createdByUserId,
+    updatedByUserId,
+    updatedAt,
     payment.youShouldPay ?? null
   );
 
@@ -1089,7 +1177,7 @@ export function getSqliteRepositories(): DataRepositories {
 
       const paymentId = existing.paymentNextId ?? 0;
       const transaction = database.transaction(() => {
-        savePayment(database, uniqueId, paymentId, payment);
+        savePayment(database, uniqueId, paymentId, payment, ownerUserId, "create");
         database
           .prepare("UPDATE groups SET payment_next_id = ? WHERE unique_id = ?")
           .run(paymentId + 1, uniqueId);
@@ -1112,7 +1200,7 @@ export function getSqliteRepositories(): DataRepositories {
       if (!existing?.paymentList?.has(paymentId)) {
         throw new Error(`No payment found for ${paymentId}`);
       }
-      savePayment(getDb(), uniqueId, paymentId, payment);
+      savePayment(getDb(), uniqueId, paymentId, payment, ownerUserId, "update");
       const updated = await this.getGroup(ownerUserId, uniqueId);
       const updatedPayment = updated?.paymentList?.get(paymentId);
       if (!updatedPayment) {

@@ -7,7 +7,16 @@ export type Payment =
   shareDetails?: Array<PaymentShare>;
   splitMode?: "equal" | "shares";
   createdAt?: string;
+  createdBy?: PaymentAuditUser;
+  updatedBy?: PaymentAuditUser;
+  updatedAt?: string;
   youShouldPay?: number;
+};
+
+export type PaymentAuditUser = {
+  uniqueId: string;
+  name: string;
+  email: string;
 };
 
 export type PaymentList = Map<number, Payment>;
