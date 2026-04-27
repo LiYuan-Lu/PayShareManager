@@ -1,15 +1,19 @@
 import { Link } from "react-router";
 
 import { requireUserId } from "../data/auth.server";
-import { getFriends } from "../data/friend-data";
+import { getFriends, getReceivedFriendInvites } from "../data/friend-data";
 import { getGroups, type GroupRecord } from "../data/group-data";
 import type { Payment } from "../data/settlement";
 import type { Route } from "./+types/home";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await requireUserId(request);
-  const [groups, friends] = await Promise.all([getGroups(userId), getFriends(userId)]);
-  return { groups, friends };
+  const [groups, friends, friendInvites] = await Promise.all([
+    getGroups(userId),
+    getFriends(userId),
+    getReceivedFriendInvites(userId),
+  ]);
+  return { groups, friends, friendInvites };
 }
 
 function getPayments(group: GroupRecord) {
@@ -27,7 +31,7 @@ function formatAmount(amount: number) {
 export default function Home({
   loaderData,
 }: Route.ComponentProps) {
-  const { groups, friends } = loaderData;
+  const { groups, friends, friendInvites } = loaderData;
   const groupSummaries = groups.map((group) => {
     const payments = getPayments(group);
     return {
@@ -59,6 +63,23 @@ export default function Home({
         <img alt="" className="home-icon" src="/icons/app.svg" />
       </section>
 
+      {friendInvites.length ? (
+        <section className="home-invite-alert">
+          <div>
+            <span>{friendInvites.length}</span>
+            <div>
+              <strong>
+                {friendInvites.length === 1
+                  ? "You have a pending friend invite"
+                  : "You have pending friend invites"}
+              </strong>
+              <p>Review requests before adding them to groups or shared payments.</p>
+            </div>
+          </div>
+          <Link to="/friends/invites">Review invites</Link>
+        </section>
+      ) : null}
+
       <section className="home-stats" aria-label="Summary">
         <div className="home-stat-card">
           <span>Groups</span>
@@ -76,6 +97,10 @@ export default function Home({
           <span>Total paid</span>
           <strong>{formatAmount(totalPaid)}</strong>
         </div>
+        <Link className="home-stat-card home-stat-link" to="/friends/invites">
+          <span>Invites</span>
+          <strong>{friendInvites.length}</strong>
+        </Link>
       </section>
 
       <section className="home-actions" aria-label="Quick actions">
@@ -83,7 +108,10 @@ export default function Home({
           New Group
         </Link>
         <Link className="home-action-secondary" to="/friends/create">
-          New Friend
+          Invite Friend
+        </Link>
+        <Link className="home-action-secondary" to="/friends/invites">
+          Friend Invites
         </Link>
       </section>
 

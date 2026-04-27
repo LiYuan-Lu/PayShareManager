@@ -339,4 +339,47 @@ describe("friend invites", () => {
       /already in your friends/
     );
   });
+
+  it("restores a deleted friend without sending a duplicate invite when the other side still has the relationship", async () => {
+    const sender = await auth.registerUser({
+      email: "invite-restore-a@example.com",
+      name: "Restore A",
+      password: "password123",
+    });
+    const recipient = await auth.registerUser({
+      email: "invite-restore-b@example.com",
+      name: "Restore B",
+      password: "password123",
+    });
+
+    const invite = await friendData.createFriendInvite(sender.uniqueId, recipient.email);
+    await friendData.respondToFriendInvite(recipient.uniqueId, invite.uniqueId, "accepted");
+
+    const senderFriends = await friendData.getFriends(sender.uniqueId);
+    const recipientFriends = await friendData.getFriends(recipient.uniqueId);
+    const recipientFriendForSender = senderFriends.find(
+      (friend) => friend.email === recipient.email
+    );
+    assert.ok(recipientFriendForSender?.uniqueId);
+    assert.ok(recipientFriends.some((friend) => friend.email === sender.email));
+
+    await friendData.deleteFriend(sender.uniqueId, recipientFriendForSender.uniqueId);
+    assert.equal(
+      (await friendData.getFriends(sender.uniqueId)).some(
+        (friend) => friend.email === recipient.email
+      ),
+      false
+    );
+
+    const restoredInvite = await friendData.createFriendInvite(sender.uniqueId, recipient.email);
+    assert.equal(restoredInvite.status, "accepted");
+    assert.equal(restoredInvite.uniqueId, "");
+    assert.equal(
+      (await friendData.getFriends(sender.uniqueId)).some(
+        (friend) => friend.email === recipient.email
+      ),
+      true
+    );
+    assert.deepEqual(await friendData.getReceivedFriendInvites(recipient.uniqueId), []);
+  });
 });

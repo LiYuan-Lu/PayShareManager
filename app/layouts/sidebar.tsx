@@ -199,7 +199,13 @@ export default function SidebarLayout({
                 <li>
                   <NavLink
                     className={({ isActive, isPending }) =>
-                      isActive ? "active" : isPending ? "pending" : ""
+                      [
+                        "nav-invite-link",
+                        friendInviteCount > 0 ? "nav-invite-link-has-count" : "",
+                        isActive ? "active" : isPending ? "pending" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
                     }
                     to="friends/invites"
                   >

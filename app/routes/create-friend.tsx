@@ -29,6 +29,11 @@ export async function action({
 
     try {
       const invite = await createFriendInvite(userId, email);
+      if (invite.status === "accepted") {
+        return {
+          success: `${invite.recipient.name} has been restored to your friends.`,
+        } satisfies CreateFriendActionData;
+      }
       return {
         success: `Invite sent to ${invite.recipient.email}.`,
       } satisfies CreateFriendActionData;

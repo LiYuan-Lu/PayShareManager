@@ -702,6 +702,22 @@ export function getSqliteRepositories(): DataRepositories {
         throw new Error("This user is already in your friends.");
       }
 
+      const reverseFriend = database
+        .prepare("SELECT 1 FROM friends WHERE owner_user_id = ? AND email = ?")
+        .get(recipient.uniqueId, sender.email);
+      if (reverseFriend) {
+        ensureFriendRecord(database, senderUserId, recipient);
+        const now = new Date().toISOString();
+        return {
+          uniqueId: "",
+          sender,
+          recipient,
+          status: "accepted",
+          createdAt: now,
+          respondedAt: now,
+        };
+      }
+
       const existingInvite = database
         .prepare(`
           SELECT 1
