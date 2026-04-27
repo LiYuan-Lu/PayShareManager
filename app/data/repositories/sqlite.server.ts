@@ -110,7 +110,6 @@ type DbPayment = {
   updated_by_email: string | null;
   updated_by_name: string | null;
   updated_at: string | null;
-  you_should_pay: number | null;
 };
 
 type DbPaymentShare = {
@@ -262,7 +261,6 @@ function migrate(database: Database.Database) {
       created_by_user_id TEXT,
       updated_by_user_id TEXT,
       updated_at TEXT,
-      you_should_pay REAL,
       PRIMARY KEY (group_id, payment_id),
       FOREIGN KEY (group_id) REFERENCES groups(unique_id) ON DELETE CASCADE,
       FOREIGN KEY (created_by_user_id) REFERENCES users(unique_id) ON DELETE SET NULL,
@@ -305,6 +303,7 @@ function migrate(database: Database.Database) {
   backfillPaymentAudit(database);
   migrateOwnerMemberIds(database);
   removeCachedMemberNames(database);
+  removeDerivedPaymentViewerBalance(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date().toISOString());
   markMigration(database, "20260427_auth_user_scope");
   markMigration(database, "20260427_group_settlement_state");
@@ -316,6 +315,7 @@ function migrate(database: Database.Database) {
   markMigration(database, "20260427_login_rate_limit");
   markMigration(database, "20260427_drop_member_name_caches");
   markMigration(database, "20260427_owner_member_ids");
+  markMigration(database, "20260427_drop_payment_viewer_balance_cache");
 }
 
 function hasColumn(database: Database.Database, tableName: string, columnName: string) {
@@ -380,7 +380,6 @@ function removeCachedMemberNames(database: Database.Database) {
           created_by_user_id TEXT,
           updated_by_user_id TEXT,
           updated_at TEXT,
-          you_should_pay REAL,
           PRIMARY KEY (group_id, payment_id),
           FOREIGN KEY (group_id) REFERENCES groups(unique_id) ON DELETE CASCADE,
           FOREIGN KEY (created_by_user_id) REFERENCES users(unique_id) ON DELETE SET NULL,
@@ -398,8 +397,7 @@ function removeCachedMemberNames(database: Database.Database) {
           created_at,
           created_by_user_id,
           updated_by_user_id,
-          updated_at,
-          you_should_pay
+          updated_at
         )
         SELECT
           group_id,
@@ -412,8 +410,7 @@ function removeCachedMemberNames(database: Database.Database) {
           created_at,
           created_by_user_id,
           updated_by_user_id,
-          updated_at,
-          you_should_pay
+          updated_at
         FROM payments;
 
         DROP TABLE payments;
@@ -441,6 +438,67 @@ function removeCachedMemberNames(database: Database.Database) {
         ALTER TABLE payment_shares_next RENAME TO payment_shares;
       `);
     }
+  });
+  transaction();
+  database.pragma("foreign_keys = ON");
+}
+
+function removeDerivedPaymentViewerBalance(database: Database.Database) {
+  if (!hasColumn(database, "payments", "you_should_pay")) {
+    return;
+  }
+
+  database.pragma("foreign_keys = OFF");
+  const transaction = database.transaction(() => {
+    database.exec(`
+      CREATE TABLE payments_next (
+        group_id TEXT NOT NULL,
+        payment_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        payer_id TEXT NOT NULL,
+        cost REAL NOT NULL,
+        currency TEXT NOT NULL DEFAULT '${defaultCurrency}',
+        split_mode TEXT NOT NULL DEFAULT 'equal',
+        created_at TEXT,
+        created_by_user_id TEXT,
+        updated_by_user_id TEXT,
+        updated_at TEXT,
+        PRIMARY KEY (group_id, payment_id),
+        FOREIGN KEY (group_id) REFERENCES groups(unique_id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by_user_id) REFERENCES users(unique_id) ON DELETE SET NULL,
+        FOREIGN KEY (updated_by_user_id) REFERENCES users(unique_id) ON DELETE SET NULL
+      );
+
+      INSERT OR REPLACE INTO payments_next (
+        group_id,
+        payment_id,
+        name,
+        payer_id,
+        cost,
+        currency,
+        split_mode,
+        created_at,
+        created_by_user_id,
+        updated_by_user_id,
+        updated_at
+      )
+      SELECT
+        group_id,
+        payment_id,
+        name,
+        payer_id,
+        cost,
+        currency,
+        split_mode,
+        created_at,
+        created_by_user_id,
+        updated_by_user_id,
+        updated_at
+      FROM payments;
+
+      DROP TABLE payments;
+      ALTER TABLE payments_next RENAME TO payments;
+    `);
   });
   transaction();
   database.pragma("foreign_keys = ON");
@@ -890,8 +948,7 @@ function mapGroup(row: DbGroup, viewerUserId: string): GroupRecord {
         payments.updated_by_user_id,
         updater.email AS updated_by_email,
         updater.name AS updated_by_name,
-        payments.updated_at,
-        payments.you_should_pay
+        payments.updated_at
       FROM payments
       LEFT JOIN users creator ON creator.unique_id = payments.created_by_user_id
       LEFT JOIN users updater ON updater.unique_id = payments.updated_by_user_id
@@ -968,7 +1025,6 @@ function mapPayment(groupId: string, row: DbPayment, membersById: Map<string, Me
           }
         : undefined,
     updatedAt: row.updated_at ?? undefined,
-    youShouldPay: row.you_should_pay ?? undefined,
   };
 }
 
@@ -1033,10 +1089,9 @@ function savePayment(
       created_at,
       created_by_user_id,
       updated_by_user_id,
-      updated_at,
-      you_should_pay
+      updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     groupId,
     paymentId,
@@ -1048,8 +1103,7 @@ function savePayment(
     payment.createdAt ?? null,
     createdByUserId,
     updatedByUserId,
-    updatedAt,
-    payment.youShouldPay ?? null
+    updatedAt
   );
 
   database

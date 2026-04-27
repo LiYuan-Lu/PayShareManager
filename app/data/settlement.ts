@@ -13,7 +13,6 @@ export type Payment =
   createdBy?: PaymentAuditUser;
   updatedBy?: PaymentAuditUser;
   updatedAt?: string;
-  youShouldPay?: number;
 };
 
 export type PaymentAuditUser = {
@@ -148,10 +147,6 @@ export function calculateMemberShouldPay(payment: Payment, memberId = kUser.uniq
   }
 
   return shareCost;
-}
-
-export function calculateYouShouldPay(payment: Payment) {
-  return calculateMemberShouldPay(payment);
 }
 
 function roundTo2(value: number) {

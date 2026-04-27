@@ -206,6 +206,7 @@ describe("auth", () => {
     assert.ok(!columns("group_members").includes("name"));
     assert.ok(!columns("payments").includes("payer_name"));
     assert.ok(!columns("payment_shares").includes("member_name"));
+    assert.ok(!columns("payments").includes("you_should_pay"));
     assert.equal(
       (
         database

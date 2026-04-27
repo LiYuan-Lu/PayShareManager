@@ -4,7 +4,6 @@ import sortBy from "sort-by";
 import { defaultCurrency, normalizeCurrency } from "./currencies.js";
 import type { DataRepositories } from "./repositories/types";
 import {
-  calculateMemberShouldPay,
   getGroupPaymentMemberIds,
   type GroupMutation,
   type GroupRecord,
@@ -84,11 +83,6 @@ export async function addPayment(ownerUserId: string, uniqueId: string, payment:
     currency: normalizeCurrency(payment.currency ?? defaultCurrency),
     createdAt: payment.createdAt ?? new Date().toISOString(),
   };
-  const group = await repository.getGroup(ownerUserId, uniqueId);
-  paymentToSave.youShouldPay = calculateMemberShouldPay(
-    paymentToSave,
-    group?.viewerMemberId
-  );
   await repository.addPayment(ownerUserId, uniqueId, paymentToSave);
 }
 
@@ -134,10 +128,6 @@ export async function updatePayment(ownerUserId: string, uniqueId: string, payme
     currency: normalizeCurrency(payment.currency ?? existingPayment.currency ?? defaultCurrency),
     createdAt: payment.createdAt ?? existingPayment.createdAt ?? new Date().toISOString(),
   };
-  updatedPayment.youShouldPay = calculateMemberShouldPay(
-    updatedPayment,
-    group.viewerMemberId
-  );
   return repository.updatePayment(ownerUserId, uniqueId, paymentId, updatedPayment);
 }
 
