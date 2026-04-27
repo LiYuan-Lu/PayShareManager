@@ -5,6 +5,7 @@ import { getGroup, settleGroup } from "../data/group-data";
 import { requireUserId } from "../data/auth.server";
 import { defaultCurrency, formatCurrencyAmount, normalizeCurrency } from "../data/currencies";
 import {
+  calculateMemberShouldPay,
   calculateGroupSettlementByCurrency,
   type Member,
   type Payment,
@@ -102,21 +103,6 @@ export default function Group({
         })
       : "";
   const viewerMemberId = group.viewerMemberId ?? "0";
-  const getViewerShareAmount = (payment: Payment) => {
-    const shareDetails =
-      payment.splitMode === "shares" && payment.shareDetails?.length
-        ? payment.shareDetails
-        : payment.shareMember.map((member) => ({ member, shares: 1 }));
-    const totalShares = shareDetails.reduce((sum, item) => sum + item.shares, 0);
-    if (totalShares <= 0) {
-      return 0;
-    }
-    const viewerShare = shareDetails.find((item) => item.member.uniqueId === viewerMemberId);
-    if (!viewerShare) {
-      return 0;
-    }
-    return Number(payment.cost ?? 0) * (viewerShare.shares / totalShares);
-  };
   const getPaymentSummary = (payment: Payment) => {
     const isYouPayer = payment.payer.uniqueId === viewerMemberId;
     const isYouShared =
@@ -127,10 +113,7 @@ export default function Group({
       return "not involved";
     }
 
-    const viewerShareAmount = getViewerShareAmount(payment);
-    const youShouldPay = isYouPayer
-      ? -(Number(payment.cost ?? 0) - viewerShareAmount)
-      : viewerShareAmount;
+    const youShouldPay = calculateMemberShouldPay(payment, viewerMemberId);
     if (youShouldPay > 0) {
       return `you borrowed ${formatAmount(youShouldPay, payment.currency)}`;
     }
@@ -140,11 +123,7 @@ export default function Group({
     return "not involved";
   };
   const getSummaryToneClass = (payment: Payment) => {
-    const viewerShareAmount = getViewerShareAmount(payment);
-    const youShouldPay =
-      payment.payer.uniqueId === viewerMemberId
-        ? -(Number(payment.cost ?? 0) - viewerShareAmount)
-        : viewerShareAmount;
+    const youShouldPay = calculateMemberShouldPay(payment, viewerMemberId);
     if (youShouldPay > 0) {
       return "payment-summary-borrowed";
     }

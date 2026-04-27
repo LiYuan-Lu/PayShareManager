@@ -459,6 +459,25 @@ describe("user scoped data", () => {
     let payment = sharedGroup?.paymentList?.get(0);
     assert.equal(payment?.createdBy?.email, owner.email);
     assert.equal(payment?.updatedBy, undefined);
+    assert.equal(payment?.payer.name, owner.name);
+    assert.equal(
+      groupData.calculateMemberShouldPay(payment!, sharedGroup?.viewerMemberId ?? ""),
+      21
+    );
+
+    const memberSettlements = groupData.calculateGroupSettlementByCurrency(sharedGroup);
+    assert.deepEqual(
+      memberSettlements[0].settlement.memberSettlements.map((item) => ({
+        member: item.member.name,
+        paid: item.paid,
+        share: item.share,
+        net: item.net,
+      })),
+      [
+        { member: owner.name, paid: 42, share: 21, net: 21 },
+        { member: "You", paid: 0, share: 21, net: -21 },
+      ]
+    );
 
     await groupData.updatePayment(member.uniqueId, group.uniqueId ?? "", 0, {
       name: "Lunch and drinks",

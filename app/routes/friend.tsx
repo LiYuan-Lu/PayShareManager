@@ -117,6 +117,12 @@ export default function Friend({
       .map((balance) => formatCurrencyAmount(Math.abs(balance.net), balance.currency))
       .join(" / ") || formatCurrencyAmount(0, "TWD");
   const paymentCount = balances.reduce((sum, balance) => sum + balance.paymentCount, 0);
+  const balanceToneClass = (net: number) =>
+    net < -0.005
+      ? "friend-balance-negative"
+      : net > 0.005
+        ? "friend-balance-positive"
+        : "friend-balance-neutral";
 
   return (
     <div id="friend" className="friend-shell">
@@ -139,9 +145,17 @@ export default function Friend({
           </div>
           <div className="friend-metric friend-balance-metric">
             <span>Balance</span>
-            <strong className={activeBalances.some((balance) => balance.net < 0) ? "friend-balance-negative" : ""}>
-              {balanceAmount}
-            </strong>
+            {activeBalances.length ? (
+              <div className="friend-balance-metric-list">
+                {activeBalances.map((balance) => (
+                  <strong className={balanceToneClass(balance.net)} key={balance.currency}>
+                    {formatCurrencyAmount(Math.abs(balance.net), balance.currency)}
+                  </strong>
+                ))}
+              </div>
+            ) : (
+              <strong className="friend-balance-neutral">{balanceAmount}</strong>
+            )}
           </div>
         </div>
       </div>
@@ -159,7 +173,7 @@ export default function Friend({
         <div className="friend-balance-breakdown">
           {balances.length ? (
             balances.map((balance) => (
-              <div key={balance.currency}>
+              <div className={balanceToneClass(balance.net)} key={balance.currency}>
                 <span>{balance.currency}</span>
                 <strong>
                   {balance.net > 0

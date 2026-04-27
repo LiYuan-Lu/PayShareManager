@@ -123,17 +123,17 @@ function getPaymentShareAmount(payment: Payment, memberId: string) {
   return payment.cost * (memberShare.shares / totalShares);
 }
 
-export function calculateYouShouldPay(payment: Payment) {
+export function calculateMemberShouldPay(payment: Payment, memberId = kUser.uniqueId) {
   const shareDetails = getPaymentShareDetails(payment);
-  const youShare = shareDetails.find((item) => item.member.uniqueId === kUser.uniqueId);
-  const isPayByYou = payment.payer.uniqueId === kUser.uniqueId;
+  const memberShare = shareDetails.find((item) => item.member.uniqueId === memberId);
+  const isPaidByMember = payment.payer.uniqueId === memberId;
   const totalShares = shareDetails.reduce((sum, item) => sum + item.shares, 0);
 
-  if(!youShare && isPayByYou) {
+  if(!memberShare && isPaidByMember) {
     return -payment.cost
   }
 
-  if(!youShare) {
+  if(!memberShare) {
     return 0;
   }
 
@@ -141,13 +141,17 @@ export function calculateYouShouldPay(payment: Payment) {
     return 0;
   }
 
-  const shareCost = payment.cost * (youShare.shares / totalShares);
+  const shareCost = payment.cost * (memberShare.shares / totalShares);
 
-  if(isPayByYou) {
+  if(isPaidByMember) {
     return - (payment.cost - shareCost);
   }
 
   return shareCost;
+}
+
+export function calculateYouShouldPay(payment: Payment) {
+  return calculateMemberShouldPay(payment);
 }
 
 function roundTo2(value: number) {

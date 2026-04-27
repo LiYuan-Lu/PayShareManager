@@ -16,6 +16,7 @@ export {
   calculateGroupSettlement,
   calculateGroupSettlementByCurrency,
   calculateMemberPairBalancesByCurrency,
+  calculateMemberShouldPay,
   getGroupPaymentMemberIds,
   type GroupMutation,
   type GroupRecord,

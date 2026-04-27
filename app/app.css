@@ -735,11 +735,34 @@ i {
 }
 
 .friend-balance-metric strong {
+  font-size: 1.05rem;
+}
+
+.friend-balance-metric-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.friend-balance-metric-list strong + strong {
+  border-left: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  padding-left: 0.65rem;
+}
+
+.friend-balance-positive,
+.friend-balance-metric .friend-balance-positive {
   color: var(--success);
 }
 
+.friend-balance-negative,
 .friend-balance-metric .friend-balance-negative {
   color: var(--danger);
+}
+
+.friend-balance-neutral,
+.friend-balance-metric .friend-balance-neutral {
+  color: var(--text-muted);
 }
 
 .friend-balance-section {
@@ -770,7 +793,7 @@ i {
   min-width: 0;
 }
 
-.friend-balance-breakdown div {
+.friend-balance-breakdown > div {
   display: flex;
   justify-content: space-between;
   gap: 0.85rem;
@@ -779,6 +802,10 @@ i {
   border-radius: 12px;
   background: var(--surface);
   padding: 0.65rem 0.75rem;
+}
+
+.friend-balance-breakdown > div + div {
+  border-top-color: color-mix(in srgb, var(--primary) 24%, var(--border));
 }
 
 .friend-balance-breakdown span {
@@ -791,7 +818,6 @@ i {
 
 .friend-balance-breakdown strong {
   min-width: 0;
-  color: var(--text);
   overflow-wrap: anywhere;
   text-align: right;
 }
