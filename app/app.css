@@ -25,6 +25,7 @@
   --danger-soft: #fef2f2;
   --success: #047857;
   --success-soft: #ecfdf5;
+  --auth-input-bg: #f7f9ff;
 }
 
 html[data-theme="dark"] {
@@ -54,6 +55,7 @@ html[data-theme="dark"] {
   --danger-soft: #3a1820;
   --success: #34d399;
   --success-soft: #0b2f25;
+  --auth-input-bg: #17243b;
 }
 
 html {
@@ -1178,7 +1180,15 @@ p span {
 .auth-field input {
   width: 100%;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface) 82%, var(--surface-soft));
+  background: var(--auth-input-bg);
+}
+
+.auth-field input:-webkit-autofill,
+.auth-field input:-webkit-autofill:hover,
+.auth-field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--auth-input-bg) inset !important;
+  caret-color: var(--text);
 }
 
 .auth-password-control {
@@ -1187,7 +1197,7 @@ p span {
   align-items: center;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface) 82%, var(--surface-soft));
+  background: var(--auth-input-bg);
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
