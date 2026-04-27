@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   calculateGroupSettlement,
+  calculateMemberPairBalance,
   type GroupRecord,
   type Member,
   type Payment,
@@ -167,5 +168,60 @@ describe("calculateGroupSettlement", () => {
       You: { paid: 0, share: 0, net: 0 },
     });
     assert.deepEqual(transfers(result), []);
+  });
+});
+
+describe("calculateMemberPairBalance", () => {
+  it("nets direct payment shares between you and one friend", () => {
+    const trip = group(
+      [
+        payment({
+          payer: you,
+          cost: 90,
+          shareMember: [you, alex, blair],
+        }),
+        payment({
+          payer: alex,
+          cost: 80,
+          shareMember: [you, alex],
+        }),
+        payment({
+          payer: blair,
+          cost: 120,
+          shareMember: [you, alex, blair],
+        }),
+      ],
+      [you, alex, blair]
+    );
+    const dinner = {
+      ...group(
+        [
+          payment({
+            payer: you,
+            cost: 120,
+            shareMember: [you, alex],
+            splitMode: "shares",
+            shareDetails: [
+              { member: you, shares: 1 },
+              { member: alex, shares: 3 },
+            ],
+          }),
+        ],
+        [you, alex]
+      ),
+      uniqueId: "group-2",
+    };
+
+    const result = calculateMemberPairBalance([trip, dinner], alex, you);
+
+    assert.deepEqual(result, {
+      member: you,
+      counterparty: alex,
+      paidForCounterparty: 120,
+      counterpartyPaidForMember: 40,
+      net: 80,
+      paymentCount: 3,
+      groupCount: 2,
+    });
   });
 });

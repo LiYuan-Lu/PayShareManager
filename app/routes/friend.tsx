@@ -4,6 +4,8 @@ import type { FriendMutation } from "../data/friend-data";
 
 import { deleteFriend, getFriend, getFriendUsage, updateFriend } from "../data/friend-data";
 import { requireUserId } from "../data/auth.server";
+import { getGroups } from "../data/group-data";
+import { calculateMemberPairBalance } from "../data/settlement";
 import type { Route } from "./+types/friend";
 
 type FriendActionData = {
@@ -51,16 +53,30 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   if (!friend) {
     throw new Response("Not Found", { status: 404 });
   }
-  const usage = await getFriendUsage(userId, params.uniqueId);
-  return { friend, usage };
+  const [usage, groups] = await Promise.all([
+    getFriendUsage(userId, params.uniqueId),
+    getGroups(userId),
+  ]);
+  const balance = calculateMemberPairBalance(groups, {
+    uniqueId: params.uniqueId,
+    name: friend.name ?? "",
+  });
+  return { friend, usage, balance };
 }
 
 export default function Friend({
   loaderData,
 }: Route.ComponentProps) {
-  const { friend, usage } = loaderData;
+  const { friend, usage, balance } = loaderData;
   const actionData = useActionData<FriendActionData>();
   const isDeleteDisabled = usage.groupCount > 0 || usage.paymentCount > 0;
+  const balanceAmount = Math.abs(balance.net).toFixed(2);
+  const balanceLabel =
+    balance.net > 0
+      ? `${friend.name} owes you`
+      : balance.net < 0
+        ? `You owe ${friend.name}`
+        : "All settled";
 
   return (
     <div id="friend" className="friend-shell">
@@ -81,8 +97,36 @@ export default function Friend({
             <span>Payments</span>
             <strong>{usage.paymentCount}</strong>
           </div>
+          <div className="friend-metric friend-balance-metric">
+            <span>Balance</span>
+            <strong className={balance.net < 0 ? "friend-balance-negative" : ""}>
+              ${balanceAmount}
+            </strong>
+          </div>
         </div>
       </div>
+
+      <section className="friend-balance-section">
+        <div>
+          <p className="friend-eyebrow">Between you two</p>
+          <h2>{balanceLabel}</h2>
+          <p>
+            Based on {balance.paymentCount} direct payment
+            {balance.paymentCount === 1 ? "" : "s"} across {balance.groupCount} group
+            {balance.groupCount === 1 ? "" : "s"}.
+          </p>
+        </div>
+        <div className="friend-balance-breakdown">
+          <div>
+            <span>You paid for {friend.name}</span>
+            <strong>${balance.paidForCounterparty.toFixed(2)}</strong>
+          </div>
+          <div>
+            <span>{friend.name} paid for you</span>
+            <strong>${balance.counterpartyPaidForMember.toFixed(2)}</strong>
+          </div>
+        </div>
+      </section>
 
       <Form key={friend.uniqueId} method="post" className="friend-settings-form">
         <section className="friend-section">

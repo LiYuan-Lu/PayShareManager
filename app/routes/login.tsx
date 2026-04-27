@@ -8,6 +8,7 @@ import {
 } from "react-router";
 import { useState } from "react";
 
+import { AuthPageFrame } from "../components/auth-page-frame";
 import { PasswordVisibilityIcon } from "../components/password-visibility-icon";
 import { createUserSession, getCurrentUser, loginUser } from "../data/auth.server";
 import type { Route } from "./+types/login";
@@ -57,7 +58,7 @@ export default function Login() {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <main className="auth-page">
+    <AuthPageFrame>
       <Form className="auth-card" method="post">
         <div className="auth-header">
           <img alt="" className="auth-icon" src="/icons/app.svg" />
@@ -103,6 +104,6 @@ export default function Login() {
           New here? <Link to={`/register?redirectTo=${encodeURIComponent(redirectTo)}`}>Create an account</Link>
         </p>
       </Form>
-    </main>
+    </AuthPageFrame>
   );
 }

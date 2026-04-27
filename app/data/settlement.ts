@@ -35,6 +35,16 @@ export type GroupSettlement = {
   transfers: SettlementTransfer[];
 };
 
+export type MemberPairBalance = {
+  member: Member;
+  counterparty: Member;
+  paidForCounterparty: number;
+  counterpartyPaidForMember: number;
+  net: number;
+  paymentCount: number;
+  groupCount: number;
+};
+
 export interface Member {
   uniqueId: string;
   name: string;
@@ -69,6 +79,21 @@ function getPaymentShareDetails(payment: Payment): PaymentShare[] {
   }
 
   return (payment.shareMember ?? []).map((member) => ({ member, shares: 1 }));
+}
+
+function getPaymentShareAmount(payment: Payment, memberId: string) {
+  const shareDetails = getPaymentShareDetails(payment);
+  const totalShares = shareDetails.reduce((sum, item) => sum + item.shares, 0);
+  if (totalShares <= 0) {
+    return 0;
+  }
+
+  const memberShare = shareDetails.find((item) => item.member.uniqueId === memberId);
+  if (!memberShare) {
+    return 0;
+  }
+
+  return payment.cost * (memberShare.shares / totalShares);
 }
 
 export function calculateYouShouldPay(payment: Payment) {
@@ -211,6 +236,64 @@ export function calculateGroupSettlement(group: GroupRecord | null | undefined):
   return {
     memberSettlements,
     transfers: buildTransfers(memberSettlements),
+  };
+}
+
+export function calculateMemberPairBalance(
+  groups: GroupRecord[],
+  counterparty: Member,
+  member: Member = kUser
+): MemberPairBalance {
+  let paidForCounterparty = 0;
+  let counterpartyPaidForMember = 0;
+  let paymentCount = 0;
+  const groupIds = new Set<string>();
+
+  groups.forEach((group) => {
+    group.paymentList?.forEach((payment) => {
+      const cost = Number(payment.cost);
+      if (!Number.isFinite(cost) || cost <= 0) {
+        return;
+      }
+
+      const memberPaid = payment.payer.uniqueId === member.uniqueId;
+      const counterpartyPaid = payment.payer.uniqueId === counterparty.uniqueId;
+      if (!memberPaid && !counterpartyPaid) {
+        return;
+      }
+
+      if (memberPaid) {
+        const amount = getPaymentShareAmount(payment, counterparty.uniqueId);
+        if (amount > 0) {
+          paidForCounterparty = roundTo2(paidForCounterparty + amount);
+          paymentCount += 1;
+          if (group.uniqueId) {
+            groupIds.add(group.uniqueId);
+          }
+        }
+      }
+
+      if (counterpartyPaid) {
+        const amount = getPaymentShareAmount(payment, member.uniqueId);
+        if (amount > 0) {
+          counterpartyPaidForMember = roundTo2(counterpartyPaidForMember + amount);
+          paymentCount += 1;
+          if (group.uniqueId) {
+            groupIds.add(group.uniqueId);
+          }
+        }
+      }
+    });
+  });
+
+  return {
+    member,
+    counterparty,
+    paidForCounterparty,
+    counterpartyPaidForMember,
+    net: roundTo2(paidForCounterparty - counterpartyPaidForMember),
+    paymentCount,
+    groupCount: groupIds.size,
   };
 }
 
