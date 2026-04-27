@@ -8,6 +8,14 @@ export type FriendRepository = {
   updateFriend: (ownerUserId: string, uniqueId: string, values: FriendMutation) => Promise<FriendMutation>;
   deleteFriend: (ownerUserId: string, uniqueId: string) => Promise<void>;
   getFriendUsage: (ownerUserId: string, uniqueId: string) => Promise<FriendUsage>;
+  createFriendInvite: (senderUserId: string, recipientEmail: string) => Promise<FriendInviteRecord>;
+  getReceivedFriendInvites: (recipientUserId: string) => Promise<FriendInviteRecord[]>;
+  getSentFriendInvites: (senderUserId: string) => Promise<FriendInviteRecord[]>;
+  respondToFriendInvite: (
+    recipientUserId: string,
+    inviteId: string,
+    status: "accepted" | "declined"
+  ) => Promise<FriendInviteRecord>;
 };
 
 export type GroupRepository = {
@@ -31,6 +39,15 @@ export type UserRecord = {
   uniqueId: string;
   email: string;
   name: string;
+};
+
+export type FriendInviteRecord = {
+  uniqueId: string;
+  sender: UserRecord;
+  recipient: UserRecord;
+  status: "pending" | "accepted" | "declined";
+  createdAt: string;
+  respondedAt?: string;
 };
 
 export type UserRepository = {

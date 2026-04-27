@@ -6,7 +6,7 @@ import {
   useNavigation,
 } from "react-router";
 
-import { getFriends } from "../data/friend-data";
+import { getFriends, getReceivedFriendInvites } from "../data/friend-data";
 import { getGroups } from "../data/group-data";
 import { requireUser } from "../data/auth.server";
 import type { Route } from "./+types/sidebar";
@@ -39,15 +39,18 @@ export async function loader({
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const user = await requireUser(request);
-  const friends = await getFriends(user.uniqueId);
-  const groups = await getGroups(user.uniqueId);
-  return { friends, q, groups, user };
+  const [friends, groups, friendInvites] = await Promise.all([
+    getFriends(user.uniqueId),
+    getGroups(user.uniqueId),
+    getReceivedFriendInvites(user.uniqueId),
+  ]);
+  return { friends, q, groups, user, friendInviteCount: friendInvites.length };
 }
 
 export default function SidebarLayout({
   loaderData,
 }: Route.ComponentProps) {
-  const { friends, q, groups, user } = loaderData;
+  const { friends, q, groups, user, friendInviteCount } = loaderData;
   const navigation = useNavigation();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [groupsOpen, setGroupsOpen] = useState(true);
@@ -189,9 +192,24 @@ export default function SidebarLayout({
             <>
               <div className="nav-cta">
                 <Form method="post" action="/friends/create">
-                  <button type="submit" className="center nav-cta-button">New Friend</button>
+                  <button type="submit" className="center nav-cta-button">Invite Friend</button>
                 </Form>
               </div>
+              <ul className="nav-list">
+                <li>
+                  <NavLink
+                    className={({ isActive, isPending }) =>
+                      isActive ? "active" : isPending ? "pending" : ""
+                    }
+                    to="friends/invites"
+                  >
+                    <span className="nav-item-label">Friend invites</span>
+                    {friendInviteCount > 0 ? (
+                      <span className="nav-count-badge">{friendInviteCount}</span>
+                    ) : null}
+                  </NavLink>
+                </li>
+              </ul>
               {friends.length ? (
                 <ul className="nav-list">
                   {friends.map((friend) => (

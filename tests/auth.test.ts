@@ -186,4 +186,157 @@ describe("user scoped data", () => {
     }
     assert.equal(bobCannotReadAliceGroup, null);
   });
+
+  it("creates mutual friend records when an invite is accepted", async () => {
+    const alice = await auth.loginUser("alice@example.com", "password123");
+    const charlie = await auth.registerUser({
+      email: "charlie@example.com",
+      name: "Charlie",
+      password: "password123",
+    });
+
+    const invite = await friendData.createFriendInvite(alice.uniqueId, "charlie@example.com");
+    assert.equal(invite.sender.email, "alice@example.com");
+    assert.equal(invite.recipient.email, "charlie@example.com");
+    assert.equal(invite.status, "pending");
+
+    const receivedInvites = await friendData.getReceivedFriendInvites(charlie.uniqueId);
+    assert.equal(receivedInvites.length, 1);
+    assert.equal(receivedInvites[0].uniqueId, invite.uniqueId);
+
+    const acceptedInvite = await friendData.respondToFriendInvite(
+      charlie.uniqueId,
+      invite.uniqueId,
+      "accepted"
+    );
+    assert.equal(acceptedInvite.status, "accepted");
+
+    const aliceFriends = await friendData.getFriends(alice.uniqueId);
+    const charlieFriends = await friendData.getFriends(charlie.uniqueId);
+
+    assert.ok(aliceFriends.some((friend) => friend.email === "charlie@example.com"));
+    assert.ok(charlieFriends.some((friend) => friend.email === "alice@example.com"));
+  });
+});
+
+describe("friend invites", () => {
+  it("rejects invites to yourself and unknown emails", async () => {
+    const sender = await auth.registerUser({
+      email: "invite-self@example.com",
+      name: "Invite Self",
+      password: "password123",
+    });
+
+    await assert.rejects(
+      () => friendData.createFriendInvite(sender.uniqueId, "invite-self@example.com"),
+      /cannot invite yourself/
+    );
+    await assert.rejects(
+      () => friendData.createFriendInvite(sender.uniqueId, "missing@example.com"),
+      /No account found/
+    );
+  });
+
+  it("prevents duplicate pending invites in either direction", async () => {
+    const sender = await auth.registerUser({
+      email: "invite-duplicate-a@example.com",
+      name: "Duplicate A",
+      password: "password123",
+    });
+    const recipient = await auth.registerUser({
+      email: "invite-duplicate-b@example.com",
+      name: "Duplicate B",
+      password: "password123",
+    });
+
+    await friendData.createFriendInvite(sender.uniqueId, recipient.email);
+
+    await assert.rejects(
+      () => friendData.createFriendInvite(sender.uniqueId, recipient.email),
+      /already a pending invite/
+    );
+    await assert.rejects(
+      () => friendData.createFriendInvite(recipient.uniqueId, sender.email),
+      /already a pending invite/
+    );
+  });
+
+  it("declines invites without creating friend records", async () => {
+    const sender = await auth.registerUser({
+      email: "invite-decline-a@example.com",
+      name: "Decline A",
+      password: "password123",
+    });
+    const recipient = await auth.registerUser({
+      email: "invite-decline-b@example.com",
+      name: "Decline B",
+      password: "password123",
+    });
+
+    const invite = await friendData.createFriendInvite(sender.uniqueId, recipient.email);
+    const declinedInvite = await friendData.respondToFriendInvite(
+      recipient.uniqueId,
+      invite.uniqueId,
+      "declined"
+    );
+    assert.equal(declinedInvite.status, "declined");
+
+    const senderFriends = await friendData.getFriends(sender.uniqueId);
+    const recipientFriends = await friendData.getFriends(recipient.uniqueId);
+    assert.equal(senderFriends.some((friend) => friend.email === recipient.email), false);
+    assert.equal(recipientFriends.some((friend) => friend.email === sender.email), false);
+    assert.deepEqual(await friendData.getReceivedFriendInvites(recipient.uniqueId), []);
+  });
+
+  it("prevents accepting an invite twice or from the wrong account", async () => {
+    const sender = await auth.registerUser({
+      email: "invite-owner-a@example.com",
+      name: "Owner A",
+      password: "password123",
+    });
+    const recipient = await auth.registerUser({
+      email: "invite-owner-b@example.com",
+      name: "Owner B",
+      password: "password123",
+    });
+    const stranger = await auth.registerUser({
+      email: "invite-owner-c@example.com",
+      name: "Owner C",
+      password: "password123",
+    });
+
+    const invite = await friendData.createFriendInvite(sender.uniqueId, recipient.email);
+
+    await assert.rejects(
+      () => friendData.respondToFriendInvite(stranger.uniqueId, invite.uniqueId, "accepted"),
+      /not found/
+    );
+
+    await friendData.respondToFriendInvite(recipient.uniqueId, invite.uniqueId, "accepted");
+    await assert.rejects(
+      () => friendData.respondToFriendInvite(recipient.uniqueId, invite.uniqueId, "accepted"),
+      /already been handled/
+    );
+  });
+
+  it("prevents inviting a user who is already a friend", async () => {
+    const sender = await auth.registerUser({
+      email: "invite-existing-a@example.com",
+      name: "Existing A",
+      password: "password123",
+    });
+    const recipient = await auth.registerUser({
+      email: "invite-existing-b@example.com",
+      name: "Existing B",
+      password: "password123",
+    });
+
+    const invite = await friendData.createFriendInvite(sender.uniqueId, recipient.email);
+    await friendData.respondToFriendInvite(recipient.uniqueId, invite.uniqueId, "accepted");
+
+    await assert.rejects(
+      () => friendData.createFriendInvite(sender.uniqueId, recipient.email),
+      /already in your friends/
+    );
+  });
 });

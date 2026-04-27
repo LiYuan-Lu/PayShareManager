@@ -2,6 +2,7 @@ import { matchSorter } from "match-sorter";
 // @ts-expect-error - no types, but it's a tiny function
 import sortBy from "sort-by";
 import type { DataRepositories } from "./repositories/types";
+import type { FriendInviteRecord } from "./repositories/types";
 
 export type FriendMutation = {
   uniqueId?: string;
@@ -13,6 +14,8 @@ export type FriendUsage = {
   groupCount: number;
   paymentCount: number;
 };
+
+export type { FriendInviteRecord };
 
 let repositories: DataRepositories | null = null;
 
@@ -72,4 +75,28 @@ export async function deleteFriend(ownerUserId: string, uniqueId: string) {
 export async function getFriendUsage(ownerUserId: string, uniqueId: string) {
   const repository = await getRepositories();
   return repository.getFriendUsage(ownerUserId, uniqueId);
+}
+
+export async function createFriendInvite(senderUserId: string, recipientEmail: string) {
+  const repository = await getRepositories();
+  return repository.createFriendInvite(senderUserId, recipientEmail.trim().toLowerCase());
+}
+
+export async function getReceivedFriendInvites(recipientUserId: string) {
+  const repository = await getRepositories();
+  return repository.getReceivedFriendInvites(recipientUserId);
+}
+
+export async function getSentFriendInvites(senderUserId: string) {
+  const repository = await getRepositories();
+  return repository.getSentFriendInvites(senderUserId);
+}
+
+export async function respondToFriendInvite(
+  recipientUserId: string,
+  inviteId: string,
+  status: "accepted" | "declined"
+) {
+  const repository = await getRepositories();
+  return repository.respondToFriendInvite(recipientUserId, inviteId, status);
 }

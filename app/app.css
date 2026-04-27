@@ -415,6 +415,32 @@ form[action$="destroy"] button {
   color: #f59e0b;
 }
 
+#sidebar nav a .nav-item-label,
+#sidebar nav a .nav-count-badge {
+  float: none;
+}
+
+#sidebar nav a .nav-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: inherit;
+}
+
+.nav-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0 0.35rem;
+}
+
 .sidebar-footer a {
   position: relative;
   display: flex;
@@ -785,6 +811,55 @@ i {
 
 .friend-warning p {
   margin: 0.2rem 0 0;
+  color: var(--text-muted);
+}
+
+.friend-invite-section {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.1rem 1.35rem 1.35rem;
+}
+
+.friend-invite-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 86%, var(--surface-soft));
+  padding: 0.9rem 1rem;
+}
+
+.friend-invite-card strong,
+.friend-invite-card span {
+  display: block;
+}
+
+.friend-invite-card span {
+  margin-top: 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.friend-invite-actions {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.friend-invite-actions form {
+  margin: 0;
+}
+
+.friend-empty-state {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-soft) 70%, var(--surface));
+  padding: 1rem;
+}
+
+.friend-empty-state p {
+  margin: 0.25rem 0 0;
   color: var(--text-muted);
 }
 
@@ -1430,6 +1505,65 @@ p span {
   padding: 0.75rem 0.85rem;
 }
 
+.form-success {
+  border: 1px solid color-mix(in srgb, var(--success) 22%, var(--border));
+  border-radius: 12px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.75rem 0.85rem;
+}
+
+.invite-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 0.7rem 0.8rem;
+}
+
+.invite-row strong,
+.invite-row span {
+  display: block;
+}
+
+.invite-row div span {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.invite-status {
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.22rem 0.55rem;
+  text-transform: capitalize;
+}
+
+.invite-status-pending {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.invite-status-accepted {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.invite-status-declined {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .auth-card button {
   width: 100%;
   min-height: 2.75rem;
@@ -1609,6 +1743,16 @@ p span {
 
   .friend-actions {
     flex-direction: column;
+  }
+
+  .friend-invite-card {
+    grid-template-columns: 1fr;
+  }
+
+  .friend-invite-actions,
+  .friend-invite-actions form,
+  .friend-invite-actions button {
+    width: 100%;
   }
 
   .friend-actions button {

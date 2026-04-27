@@ -13,6 +13,7 @@ import type {
   PaymentShare,
 } from "../group-data";
 import type { DataRepositories } from "./types";
+import type { FriendInviteRecord, UserRecord } from "./types";
 
 type DbUser = {
   unique_id: string;
@@ -28,6 +29,19 @@ type DbFriend = {
   name: string;
   email: string;
   created_at: string;
+};
+
+type DbFriendInvite = {
+  unique_id: string;
+  sender_user_id: string;
+  sender_email: string;
+  sender_name: string;
+  recipient_user_id: string;
+  recipient_email: string;
+  recipient_name: string;
+  status: "pending" | "accepted" | "declined";
+  created_at: string;
+  responded_at: string | null;
 };
 
 type DbGroup = {
@@ -116,6 +130,17 @@ function migrate(database: Database.Database) {
       FOREIGN KEY (owner_user_id) REFERENCES users(unique_id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS friend_invites (
+      unique_id TEXT PRIMARY KEY,
+      sender_user_id TEXT NOT NULL,
+      recipient_user_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL,
+      responded_at TEXT,
+      FOREIGN KEY (sender_user_id) REFERENCES users(unique_id) ON DELETE CASCADE,
+      FOREIGN KEY (recipient_user_id) REFERENCES users(unique_id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS groups (
       unique_id TEXT PRIMARY KEY,
       owner_user_id TEXT NOT NULL DEFAULT '${demoUserId}',
@@ -171,6 +196,7 @@ function migrate(database: Database.Database) {
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date().toISOString());
   markMigration(database, "20260427_auth_user_scope");
   markMigration(database, "20260427_group_settlement_state");
+  markMigration(database, "20260427_friend_invites");
 }
 
 function ensureColumn(
@@ -282,7 +308,7 @@ function getFriendsFromDb(database: Database.Database, ownerUserId: string) {
   }));
 }
 
-function getUniqueId(table: "friends" | "groups" | "users" | "sessions", column = "unique_id") {
+function getUniqueId(table: "friends" | "groups" | "users" | "sessions" | "friend_invites", column = "unique_id") {
   const database = getDb();
   let uniqueId = "";
   do {
@@ -292,6 +318,75 @@ function getUniqueId(table: "friends" | "groups" | "users" | "sessions", column 
       .prepare(`SELECT 1 FROM ${table} WHERE ${column} = ?`)
       .get(uniqueId)
   );
+  return uniqueId;
+}
+
+function mapUser(row: DbUser): UserRecord {
+  return {
+    uniqueId: row.unique_id,
+    email: row.email,
+    name: row.name,
+  };
+}
+
+function mapFriendInvite(row: DbFriendInvite): FriendInviteRecord {
+  return {
+    uniqueId: row.unique_id,
+    sender: {
+      uniqueId: row.sender_user_id,
+      email: row.sender_email,
+      name: row.sender_name,
+    },
+    recipient: {
+      uniqueId: row.recipient_user_id,
+      email: row.recipient_email,
+      name: row.recipient_name,
+    },
+    status: row.status,
+    createdAt: row.created_at,
+    respondedAt: row.responded_at ?? undefined,
+  };
+}
+
+function getFriendInviteById(database: Database.Database, inviteId: string) {
+  return database
+    .prepare(`
+      SELECT
+        friend_invites.unique_id,
+        friend_invites.sender_user_id,
+        sender.email AS sender_email,
+        sender.name AS sender_name,
+        friend_invites.recipient_user_id,
+        recipient.email AS recipient_email,
+        recipient.name AS recipient_name,
+        friend_invites.status,
+        friend_invites.created_at,
+        friend_invites.responded_at
+      FROM friend_invites
+      JOIN users sender ON sender.unique_id = friend_invites.sender_user_id
+      JOIN users recipient ON recipient.unique_id = friend_invites.recipient_user_id
+      WHERE friend_invites.unique_id = ?
+    `)
+    .get(inviteId) as DbFriendInvite | undefined;
+}
+
+function ensureFriendRecord(
+  database: Database.Database,
+  ownerUserId: string,
+  friendUser: UserRecord
+) {
+  const existing = database
+    .prepare("SELECT unique_id FROM friends WHERE owner_user_id = ? AND email = ?")
+    .get(ownerUserId, friendUser.email) as { unique_id: string } | undefined;
+  if (existing) {
+    return existing.unique_id;
+  }
+
+  const uniqueId = getUniqueId("friends");
+  database.prepare(`
+    INSERT INTO friends (unique_id, owner_user_id, name, email, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(uniqueId, ownerUserId, friendUser.name, friendUser.email, new Date().toISOString());
   return uniqueId;
 }
 
@@ -434,18 +529,14 @@ export function getSqliteRepositories(): DataRepositories {
       const row = getDb()
         .prepare("SELECT unique_id, email, name, password_hash, created_at FROM users WHERE unique_id = ?")
         .get(uniqueId) as DbUser | undefined;
-      return row
-        ? { uniqueId: row.unique_id, email: row.email, name: row.name }
-        : null;
+      return row ? mapUser(row) : null;
     },
 
     async getUserByEmail(email) {
       const row = getDb()
         .prepare("SELECT unique_id, email, name, password_hash, created_at FROM users WHERE lower(email) = lower(?)")
         .get(email) as DbUser | undefined;
-      return row
-        ? { uniqueId: row.unique_id, email: row.email, name: row.name }
-        : null;
+      return row ? mapUser(row) : null;
     },
 
     async createUser(values) {
@@ -483,9 +574,7 @@ export function getSqliteRepositories(): DataRepositories {
           WHERE sessions.session_id = ? AND sessions.expires_at > ?
         `)
         .get(sessionId, new Date().toISOString()) as DbUser | undefined;
-      return row
-        ? { uniqueId: row.unique_id, email: row.email, name: row.name }
-        : null;
+      return row ? mapUser(row) : null;
     },
 
     async deleteSession(sessionId) {
@@ -590,6 +679,144 @@ export function getSqliteRepositories(): DataRepositories {
         groupCount: groupUsage.count,
         paymentCount: payerUsage.count + shareUsage.count,
       };
+    },
+
+    async createFriendInvite(senderUserId, recipientEmail) {
+      const database = getDb();
+      const sender = await this.getUserById(senderUserId);
+      if (!sender) {
+        throw new Error("Unable to find your account.");
+      }
+      const recipient = await this.getUserByEmail(recipientEmail);
+      if (!recipient) {
+        throw new Error("No account found with that email.");
+      }
+      if (recipient.uniqueId === senderUserId) {
+        throw new Error("You cannot invite yourself.");
+      }
+
+      const existingFriend = database
+        .prepare("SELECT 1 FROM friends WHERE owner_user_id = ? AND email = ?")
+        .get(senderUserId, recipient.email);
+      if (existingFriend) {
+        throw new Error("This user is already in your friends.");
+      }
+
+      const existingInvite = database
+        .prepare(`
+          SELECT 1
+          FROM friend_invites
+          WHERE status = 'pending'
+            AND (
+              (sender_user_id = ? AND recipient_user_id = ?)
+              OR (sender_user_id = ? AND recipient_user_id = ?)
+            )
+        `)
+        .get(senderUserId, recipient.uniqueId, recipient.uniqueId, senderUserId);
+      if (existingInvite) {
+        throw new Error("There is already a pending invite between you and this user.");
+      }
+
+      const uniqueId = getUniqueId("friend_invites");
+      database.prepare(`
+        INSERT INTO friend_invites (unique_id, sender_user_id, recipient_user_id, status, created_at)
+        VALUES (?, ?, ?, 'pending', ?)
+      `).run(uniqueId, senderUserId, recipient.uniqueId, new Date().toISOString());
+
+      const invite = getFriendInviteById(database, uniqueId);
+      if (!invite) {
+        throw new Error("Unable to create friend invite.");
+      }
+      return mapFriendInvite(invite);
+    },
+
+    async getReceivedFriendInvites(recipientUserId) {
+      const rows = getDb()
+        .prepare(`
+          SELECT
+            friend_invites.unique_id,
+            friend_invites.sender_user_id,
+            sender.email AS sender_email,
+            sender.name AS sender_name,
+            friend_invites.recipient_user_id,
+            recipient.email AS recipient_email,
+            recipient.name AS recipient_name,
+            friend_invites.status,
+            friend_invites.created_at,
+            friend_invites.responded_at
+          FROM friend_invites
+          JOIN users sender ON sender.unique_id = friend_invites.sender_user_id
+          JOIN users recipient ON recipient.unique_id = friend_invites.recipient_user_id
+          WHERE friend_invites.recipient_user_id = ? AND friend_invites.status = 'pending'
+          ORDER BY friend_invites.created_at DESC
+        `)
+        .all(recipientUserId) as DbFriendInvite[];
+      return rows.map(mapFriendInvite);
+    },
+
+    async getSentFriendInvites(senderUserId) {
+      const rows = getDb()
+        .prepare(`
+          SELECT
+            friend_invites.unique_id,
+            friend_invites.sender_user_id,
+            sender.email AS sender_email,
+            sender.name AS sender_name,
+            friend_invites.recipient_user_id,
+            recipient.email AS recipient_email,
+            recipient.name AS recipient_name,
+            friend_invites.status,
+            friend_invites.created_at,
+            friend_invites.responded_at
+          FROM friend_invites
+          JOIN users sender ON sender.unique_id = friend_invites.sender_user_id
+          JOIN users recipient ON recipient.unique_id = friend_invites.recipient_user_id
+          WHERE friend_invites.sender_user_id = ?
+          ORDER BY friend_invites.created_at DESC
+          LIMIT 12
+        `)
+        .all(senderUserId) as DbFriendInvite[];
+      return rows.map(mapFriendInvite);
+    },
+
+    async respondToFriendInvite(recipientUserId, inviteId, status) {
+      const database = getDb();
+      const invite = getFriendInviteById(database, inviteId);
+      if (!invite || invite.recipient_user_id !== recipientUserId) {
+        throw new Error("Friend invite not found.");
+      }
+      if (invite.status !== "pending") {
+        throw new Error("This invite has already been handled.");
+      }
+
+      const respondedAt = new Date().toISOString();
+      const transaction = database.transaction(() => {
+        database.prepare(`
+          UPDATE friend_invites
+          SET status = ?, responded_at = ?
+          WHERE unique_id = ? AND recipient_user_id = ? AND status = 'pending'
+        `).run(status, respondedAt, inviteId, recipientUserId);
+
+        if (status === "accepted") {
+          ensureFriendRecord(database, invite.recipient_user_id, {
+            uniqueId: invite.sender_user_id,
+            email: invite.sender_email,
+            name: invite.sender_name,
+          });
+          ensureFriendRecord(database, invite.sender_user_id, {
+            uniqueId: invite.recipient_user_id,
+            email: invite.recipient_email,
+            name: invite.recipient_name,
+          });
+        }
+      });
+      transaction();
+
+      const updated = getFriendInviteById(database, inviteId);
+      if (!updated) {
+        throw new Error("Friend invite not found.");
+      }
+      return mapFriendInvite(updated);
     },
 
     async getGroups(ownerUserId) {

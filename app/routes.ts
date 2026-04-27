@@ -45,12 +45,16 @@ export default [
         "routes/edit-payment.tsx"
     ),
     route(
-        "friends/:uniqueId", 
-        "routes/friend.tsx"
-    ),
-    route(
         "friends/create",
         "routes/create-friend.tsx"
+    ),
+    route(
+        "friends/invites",
+        "routes/friend-invites.tsx"
+    ),
+    route(
+        "friends/:uniqueId", 
+        "routes/friend.tsx"
     ),
     route(
         "about",
