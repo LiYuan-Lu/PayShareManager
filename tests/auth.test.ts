@@ -217,6 +217,44 @@ describe("user scoped data", () => {
     assert.ok(aliceFriends.some((friend) => friend.email === "charlie@example.com"));
     assert.ok(charlieFriends.some((friend) => friend.email === "alice@example.com"));
   });
+
+  it("shows groups to accepted account friends added as members", async () => {
+    const owner = await auth.registerUser({
+      email: "group-owner@example.com",
+      name: "Group Owner",
+      password: "password123",
+    });
+    const member = await auth.registerUser({
+      email: "group-member@example.com",
+      name: "Group Member",
+      password: "password123",
+    });
+
+    const invite = await friendData.createFriendInvite(owner.uniqueId, member.email);
+    await friendData.respondToFriendInvite(member.uniqueId, invite.uniqueId, "accepted");
+    const ownerFriend = (await friendData.getFriends(owner.uniqueId)).find(
+      (friend) => friend.email === member.email
+    );
+    assert.ok(ownerFriend?.uniqueId);
+
+    const group = await groupData.createEmptyGroup(owner.uniqueId);
+    await groupData.updateGroup(
+      owner.uniqueId,
+      group.uniqueId ?? "",
+      { name: "Shared Trip", description: "Visible to account members" },
+      [
+        ...(group.members ?? []),
+        { uniqueId: ownerFriend.uniqueId, name: ownerFriend.name },
+      ]
+    );
+
+    const memberGroups = await groupData.getGroups(member.uniqueId);
+    const sharedGroup = memberGroups.find((item) => item.uniqueId === group.uniqueId);
+
+    assert.equal(sharedGroup?.name, "Shared Trip");
+    assert.equal(sharedGroup?.viewerMemberId, ownerFriend.uniqueId);
+    assert.ok(sharedGroup?.members?.some((item) => item.name === "You"));
+  });
 });
 
 describe("friend invites", () => {

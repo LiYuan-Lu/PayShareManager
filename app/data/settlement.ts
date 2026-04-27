@@ -48,6 +48,7 @@ export type MemberPairBalance = {
 export interface Member {
   uniqueId: string;
   name: string;
+  accountUserId?: string | null;
 }
 
 export type GroupMutation = {
@@ -63,6 +64,8 @@ export type GroupMutation = {
 
 export type GroupRecord = GroupMutation & {
   createdAt: string;
+  ownerUserId?: string;
+  viewerMemberId?: string;
 };
 
 const kUserUniqueId = "0";
