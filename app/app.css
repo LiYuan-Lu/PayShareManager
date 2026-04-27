@@ -1244,6 +1244,20 @@ p span {
   border-radius: 0 !important;
 }
 
+.cost-stepper {
+  width: min(13rem, 100%);
+}
+
+.cost-stepper-value {
+  width: 7rem !important;
+  min-width: 0;
+}
+
+.cost-stepper-value::placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 .share-estimate {
   min-width: 4.75rem;
   text-align: right;

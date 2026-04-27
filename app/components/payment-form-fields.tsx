@@ -165,6 +165,24 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
       }
     };
 
+    const updatePaymentCost = (value: string) => {
+      if (/^\d*\.?\d{0,2}$/.test(value)) {
+        setPaymentCostValue(value);
+        if (formErrors.cost) {
+          setFormErrors((prev) => ({ ...prev, cost: undefined }));
+        }
+      }
+    };
+
+    const adjustPaymentCost = (delta: number) => {
+      const currentCost = Number(paymentCostValue);
+      const nextCost = Math.max(0, (Number.isFinite(currentCost) ? currentCost : 0) + delta);
+      setPaymentCostValue(Number.isInteger(nextCost) ? String(nextCost) : nextCost.toFixed(2));
+      if (formErrors.cost) {
+        setFormErrors((prev) => ({ ...prev, cost: undefined }));
+      }
+    };
+
     return (
       <>
         <p>
@@ -180,17 +198,35 @@ const PaymentFormFields = forwardRef<PaymentFormFieldsHandle, PaymentFormFieldsP
         </p>
         <p>
           <span>Cost</span>
-          <input
-            aria-label="Cost"
-            min={0}
-            name="cost"
-            onChange={(event) => setPaymentCostValue(event.target.value)}
-            placeholder="Enter amount"
-            step="0.01"
-            type="number"
-            value={paymentCostValue}
-            required
-          />
+          <div className="share-stepper cost-stepper">
+            <button
+              aria-label="Decrease cost"
+              className="share-stepper-btn"
+              onClick={() => adjustPaymentCost(-1)}
+              type="button"
+            >
+              -
+            </button>
+            <input
+              aria-label="Cost"
+              className="share-stepper-value cost-stepper-value"
+              inputMode="decimal"
+              name="cost"
+              onChange={(event) => updatePaymentCost(event.target.value)}
+              placeholder="Enter amount"
+              type="text"
+              value={paymentCostValue}
+              required
+            />
+            <button
+              aria-label="Increase cost"
+              className="share-stepper-btn"
+              onClick={() => adjustPaymentCost(1)}
+              type="button"
+            >
+              +
+            </button>
+          </div>
         </p>
         {formErrors.cost ? <p className="field-error">{formErrors.cost}</p> : null}
         <p>
