@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { AuthPageFrame } from "../components/auth-page-frame";
 import { PasswordVisibilityIcon } from "../components/password-visibility-icon";
-import { createUserSession, getCurrentUser, loginUser } from "../data/auth.server";
+import { createUserSession, getCurrentUser, loginUserWithRateLimit } from "../data/auth.server";
 import type { Route } from "./+types/login";
 
 type AuthActionData = {
@@ -40,7 +40,7 @@ export async function action({ request }: Route.ActionArgs) {
   const redirectTo = getSafeRedirectTo(formData.get("redirectTo"));
 
   try {
-    const user = await loginUser(email, password);
+    const user = await loginUserWithRateLimit(request, email, password);
     return createUserSession(user.uniqueId, redirectTo);
   } catch (error) {
     return {

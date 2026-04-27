@@ -12,6 +12,8 @@ import type {
 const scrypt = promisify(scryptCallback);
 const sessionCookieName = "payshare_session";
 const sessionMaxAgeSeconds = 60 * 60 * 24 * 30;
+const loginMaxFailures = 5;
+const loginLockMinutes = 15;
 
 let repositories: DataRepositories | null = null;
 
@@ -210,6 +212,52 @@ export async function loginUser(emailInput: string, password: string) {
     throw new Error("Invalid email or password.");
   }
   return user;
+}
+
+function getClientIp(request: Request) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+  return (
+    request.headers.get("x-real-ip") ??
+    request.headers.get("cf-connecting-ip") ??
+    "unknown"
+  );
+}
+
+function getLoginRateLimitIdentifier(request: Request, emailInput: string) {
+  return `${normalizeEmail(emailInput)}:${getClientIp(request)}`;
+}
+
+export async function loginUserWithRateLimit(request: Request, emailInput: string, password: string) {
+  const repository = await getRepositories();
+  const identifier = getLoginRateLimitIdentifier(request, emailInput);
+  const now = new Date();
+  const existingLimit = await repository.getLoginRateLimit(identifier);
+  if (existingLimit?.lockedUntil && new Date(existingLimit.lockedUntil) > now) {
+    throw new Error("Too many failed sign-in attempts. Please try again later.");
+  }
+
+  try {
+    const user = await loginUser(emailInput, password);
+    await repository.clearLoginFailures(identifier);
+    return user;
+  } catch (error) {
+    const failedCount = (existingLimit?.failedCount ?? 0) + 1;
+    const lockedUntil =
+      failedCount >= loginMaxFailures
+        ? new Date(now.getTime() + loginLockMinutes * 60 * 1000).toISOString()
+        : null;
+    await repository.recordLoginFailure(identifier, {
+      failedAt: now.toISOString(),
+      lockedUntil,
+    });
+    if (lockedUntil) {
+      throw new Error("Too many failed sign-in attempts. Please try again later.");
+    }
+    throw error;
+  }
 }
 
 export async function createUserSession(userId: string, redirectTo = "/") {

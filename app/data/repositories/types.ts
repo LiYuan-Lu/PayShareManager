@@ -58,6 +58,13 @@ export type PasswordResetTokenRecord = {
   expiresAt: string;
 };
 
+export type LoginRateLimitRecord = {
+  identifier: string;
+  failedCount: number;
+  lockedUntil: string | null;
+  lastFailedAt: string;
+};
+
 export type FriendInviteRecord = {
   uniqueId: string;
   sender: UserRecord;
@@ -77,6 +84,12 @@ export type UserRepository = {
   createSession: (userId: string, expiresAt: string) => Promise<string>;
   getSessionUser: (sessionId: string) => Promise<UserRecord | null>;
   deleteSession: (sessionId: string) => Promise<void>;
+  getLoginRateLimit: (identifier: string) => Promise<LoginRateLimitRecord | null>;
+  recordLoginFailure: (
+    identifier: string,
+    values: { failedAt: string; lockedUntil: string | null }
+  ) => Promise<LoginRateLimitRecord>;
+  clearLoginFailures: (identifier: string) => Promise<void>;
   hasActiveInviteCodes: () => Promise<boolean>;
   createInviteCode: (
     adminUserId: string,

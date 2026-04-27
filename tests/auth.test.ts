@@ -97,6 +97,42 @@ describe("auth", () => {
     );
   });
 
+  it("rate limits repeated failed sign-in attempts by email and IP", async () => {
+    await auth.registerUser({
+      email: "rate-limit@example.com",
+      name: "Rate Limit",
+      password: "password123",
+    });
+    const request = new Request("http://localhost/login", {
+      headers: { "x-forwarded-for": "203.0.113.10" },
+    });
+
+    for (let index = 0; index < 4; index += 1) {
+      await assert.rejects(
+        () => auth.loginUserWithRateLimit(request, "rate-limit@example.com", "wrong-password"),
+        /Invalid email or password/
+      );
+    }
+    await assert.rejects(
+      () => auth.loginUserWithRateLimit(request, "rate-limit@example.com", "wrong-password"),
+      /Too many failed sign-in attempts/
+    );
+    await assert.rejects(
+      () => auth.loginUserWithRateLimit(request, "rate-limit@example.com", "password123"),
+      /Too many failed sign-in attempts/
+    );
+
+    const otherIpRequest = new Request("http://localhost/login", {
+      headers: { "x-forwarded-for": "203.0.113.11" },
+    });
+    const user = await auth.loginUserWithRateLimit(
+      otherIpRequest,
+      "rate-limit@example.com",
+      "password123"
+    );
+    assert.equal(user.email, "rate-limit@example.com");
+  });
+
   it("creates a session cookie that resolves the current user", async () => {
     const user = await auth.loginUser("alice@example.com", "password123");
     const response = await auth.createUserSession(user.uniqueId, "/");

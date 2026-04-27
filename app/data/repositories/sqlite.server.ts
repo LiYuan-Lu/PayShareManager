@@ -48,6 +48,13 @@ type DbPasswordResetToken = {
   created_at: string;
 };
 
+type DbLoginRateLimit = {
+  identifier: string;
+  failed_count: number;
+  locked_until: string | null;
+  last_failed_at: string;
+};
+
 type DbFriend = {
   unique_id: string;
   owner_user_id: string;
@@ -190,6 +197,13 @@ function migrate(database: Database.Database) {
       FOREIGN KEY (created_by_user_id) REFERENCES users(unique_id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS login_rate_limits (
+      identifier TEXT PRIMARY KEY,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      locked_until TEXT,
+      last_failed_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS friends (
       unique_id TEXT PRIMARY KEY,
       owner_user_id TEXT NOT NULL DEFAULT '${demoUserId}',
@@ -298,6 +312,7 @@ function migrate(database: Database.Database) {
   markMigration(database, "20260427_payment_audit");
   markMigration(database, "20260427_payment_currency");
   markMigration(database, "20260427_admin_invites_password_reset");
+  markMigration(database, "20260427_login_rate_limit");
 }
 
 function ensureColumn(
@@ -562,6 +577,15 @@ function mapInviteCode(row: DbInviteCode): InviteCodeRecord {
     expiresAt: row.expires_at,
     disabledAt: row.disabled_at,
     createdAt: row.created_at,
+  };
+}
+
+function mapLoginRateLimit(row: DbLoginRateLimit) {
+  return {
+    identifier: row.identifier,
+    failedCount: row.failed_count,
+    lockedUntil: row.locked_until,
+    lastFailedAt: row.last_failed_at,
   };
 }
 
@@ -981,6 +1005,39 @@ export function getSqliteRepositories(): DataRepositories {
 
     async deleteSession(sessionId) {
       getDb().prepare("DELETE FROM sessions WHERE session_id = ?").run(sessionId);
+    },
+
+    async getLoginRateLimit(identifier) {
+      const row = getDb()
+        .prepare(`
+          SELECT identifier, failed_count, locked_until, last_failed_at
+          FROM login_rate_limits
+          WHERE identifier = ?
+        `)
+        .get(identifier) as DbLoginRateLimit | undefined;
+      return row ? mapLoginRateLimit(row) : null;
+    },
+
+    async recordLoginFailure(identifier, values) {
+      const existing = await this.getLoginRateLimit(identifier);
+      const failedCount = (existing?.failedCount ?? 0) + 1;
+      getDb().prepare(`
+        INSERT INTO login_rate_limits (identifier, failed_count, locked_until, last_failed_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(identifier) DO UPDATE SET
+          failed_count = excluded.failed_count,
+          locked_until = excluded.locked_until,
+          last_failed_at = excluded.last_failed_at
+      `).run(identifier, failedCount, values.lockedUntil, values.failedAt);
+      const updated = await this.getLoginRateLimit(identifier);
+      if (!updated) {
+        throw new Error("Unable to record login failure.");
+      }
+      return updated;
+    },
+
+    async clearLoginFailures(identifier) {
+      getDb().prepare("DELETE FROM login_rate_limits WHERE identifier = ?").run(identifier);
     },
 
     async hasActiveInviteCodes() {
