@@ -134,7 +134,7 @@ export default function CreateGroup({
       <section className="form-section">
         <div className="form-section-copy">
           <h2>Members</h2>
-          <p>You are included automatically. Select friends to add them now.</p>
+          <p>You are included automatically. Add friends if this group already has members.</p>
         </div>
         <div className="form-fields">
           <div className="member-included">
