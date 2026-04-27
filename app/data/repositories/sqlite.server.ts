@@ -1355,34 +1355,80 @@ export function getSqliteRepositories(): DataRepositories {
 
     async getFriendUsage(ownerUserId, uniqueId) {
       const database = getDb();
-      const groupUsage = database
+      const friend = database
+        .prepare("SELECT friend_user_id FROM friends WHERE owner_user_id = ? AND unique_id = ?")
+        .get(ownerUserId, uniqueId) as { friend_user_id: string | null } | undefined;
+      const accessibleGroups = database
         .prepare(`
-          SELECT COUNT(*) AS count
-          FROM group_members
-          JOIN groups ON groups.unique_id = group_members.group_id
-          WHERE groups.owner_user_id = ? AND group_members.member_id = ?
+          SELECT groups.unique_id, groups.owner_user_id
+          FROM groups
+          WHERE groups.owner_user_id = ?
+             OR EXISTS (
+               SELECT 1
+               FROM group_members
+               WHERE group_members.group_id = groups.unique_id
+                 AND group_members.member_user_id = ?
+             )
         `)
-        .get(ownerUserId, uniqueId) as { count: number };
-      const payerUsage = database
-        .prepare(`
-          SELECT COUNT(*) AS count
-          FROM payments
-          JOIN groups ON groups.unique_id = payments.group_id
-          WHERE groups.owner_user_id = ? AND payments.payer_id = ?
-        `)
-        .get(ownerUserId, uniqueId) as { count: number };
-      const shareUsage = database
-        .prepare(`
-          SELECT COUNT(*) AS count
-          FROM payment_shares
-          JOIN groups ON groups.unique_id = payment_shares.group_id
-          WHERE groups.owner_user_id = ? AND payment_shares.member_id = ?
-        `)
-        .get(ownerUserId, uniqueId) as { count: number };
+        .all(ownerUserId, ownerUserId) as Array<{ unique_id: string; owner_user_id: string }>;
+      let groupCount = 0;
+      let paymentCount = 0;
+
+      accessibleGroups.forEach((group) => {
+        const members = database
+          .prepare("SELECT member_id, member_user_id FROM group_members WHERE group_id = ?")
+          .all(group.unique_id) as Array<{ member_id: string; member_user_id: string | null }>;
+        const viewerMemberIds = new Set(
+          members
+            .filter((member) => member.member_user_id === ownerUserId)
+            .map((member) => member.member_id)
+        );
+        if (group.owner_user_id === ownerUserId) {
+          viewerMemberIds.add(kUser.uniqueId);
+        }
+
+        const friendMemberIds = new Set<string>();
+        if (members.some((member) => member.member_id === uniqueId)) {
+          friendMemberIds.add(uniqueId);
+        }
+        if (friend?.friend_user_id) {
+          members
+            .filter((member) => member.member_user_id === friend.friend_user_id)
+            .forEach((member) => friendMemberIds.add(member.member_id));
+          if (group.owner_user_id === friend.friend_user_id) {
+            friendMemberIds.add(kUser.uniqueId);
+          }
+        }
+
+        if (!viewerMemberIds.size || !friendMemberIds.size) {
+          return;
+        }
+
+        groupCount += 1;
+        const payments = database
+          .prepare("SELECT payment_id, payer_id FROM payments WHERE group_id = ?")
+          .all(group.unique_id) as Array<{ payment_id: number; payer_id: string }>;
+
+        payments.forEach((payment) => {
+          const shareRows = database
+            .prepare("SELECT member_id FROM payment_shares WHERE group_id = ? AND payment_id = ?")
+            .all(group.unique_id, payment.payment_id) as Array<{ member_id: string }>;
+          const shareMemberIds = new Set(shareRows.map((share) => share.member_id));
+          const viewerPaidForFriend =
+            viewerMemberIds.has(payment.payer_id) &&
+            Array.from(friendMemberIds).some((memberId) => shareMemberIds.has(memberId));
+          const friendPaidForViewer =
+            friendMemberIds.has(payment.payer_id) &&
+            Array.from(viewerMemberIds).some((memberId) => shareMemberIds.has(memberId));
+          if (viewerPaidForFriend || friendPaidForViewer) {
+            paymentCount += 1;
+          }
+        });
+      });
 
       return {
-        groupCount: groupUsage.count,
-        paymentCount: payerUsage.count + shareUsage.count,
+        groupCount,
+        paymentCount,
       };
     },
 

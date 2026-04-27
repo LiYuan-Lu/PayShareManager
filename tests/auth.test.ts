@@ -479,6 +479,23 @@ describe("user scoped data", () => {
       ]
     );
 
+    const memberFriend = (await friendData.getFriends(member.uniqueId)).find(
+      (friend) => friend.email === owner.email
+    );
+    assert.ok(memberFriend?.uniqueId);
+    assert.deepEqual(await friendData.getFriendUsage(owner.uniqueId, ownerFriend.uniqueId), {
+      groupCount: 1,
+      paymentCount: 1,
+    });
+    assert.deepEqual(await friendData.getFriendUsage(member.uniqueId, memberFriend.uniqueId), {
+      groupCount: 1,
+      paymentCount: 1,
+    });
+    await assert.rejects(
+      () => friendData.deleteFriend(member.uniqueId, memberFriend.uniqueId ?? ""),
+      /cannot be deleted/
+    );
+
     await groupData.updatePayment(member.uniqueId, group.uniqueId ?? "", 0, {
       name: "Lunch and drinks",
       payer: members[1],
