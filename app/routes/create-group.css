@@ -51,18 +51,24 @@
   min-width: 0;
 }
 
-.form-field {
-  display: grid;
-  gap: 0.35rem;
+.form-field-row {
+  display: block;
+  min-width: 0;
 }
 
-.form-field span {
+.product-form .form-field {
+  display: grid;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.product-form .form-field span {
   color: var(--text);
   font-size: 0.9rem;
   font-weight: 600;
 }
 
-.form-field input {
+.product-form .form-field input {
   width: 100%;
   border-radius: 10px;
   background: color-mix(in srgb, var(--surface) 82%, var(--surface-soft));

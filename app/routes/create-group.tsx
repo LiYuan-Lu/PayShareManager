@@ -109,25 +109,29 @@ export default function CreateGroup({
           <p>Name the shared space and add a short note if it helps.</p>
         </div>
         <div className="form-fields">
-          <label className="form-field">
-            <span>Name</span>
-            <input
-              aria-label="Name"
-              name="name"
-              placeholder="Trip to Tokyo"
-              required
-              type="text"
-            />
-          </label>
-          <label className="form-field">
-            <span>Description</span>
-            <input
-              aria-label="Description"
-              name="description"
-              placeholder="Optional description"
-              type="text"
-            />
-          </label>
+          <div className="form-field-row">
+            <label className="form-field">
+              <span>Name</span>
+              <input
+                aria-label="Name"
+                name="name"
+                placeholder="Trip to Tokyo"
+                required
+                type="text"
+              />
+            </label>
+          </div>
+          <div className="form-field-row">
+            <label className="form-field">
+              <span>Description</span>
+              <input
+                aria-label="Description"
+                name="description"
+                placeholder="Optional description"
+                type="text"
+              />
+            </label>
+          </div>
         </div>
       </section>
 

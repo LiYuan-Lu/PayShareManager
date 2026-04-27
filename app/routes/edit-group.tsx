@@ -189,27 +189,31 @@ export default function EditGroup({
           <p>Update the group name and description shown to members.</p>
         </div>
         <div className="form-fields">
-          <label className="form-field">
-            <span>Name</span>
-            <input
-              aria-label="Name"
-              defaultValue={group.name}
-              name="name"
-              placeholder="Group name"
-              required
-              type="text"
-            />
-          </label>
-          <label className="form-field">
-            <span>Description</span>
-            <input
-              aria-label="Description"
-              defaultValue={group.description}
-              name="description"
-              placeholder="Optional description"
-              type="text"
-            />
-          </label>
+          <div className="form-field-row">
+            <label className="form-field">
+              <span>Name</span>
+              <input
+                aria-label="Name"
+                defaultValue={group.name}
+                name="name"
+                placeholder="Group name"
+                required
+                type="text"
+              />
+            </label>
+          </div>
+          <div className="form-field-row">
+            <label className="form-field">
+              <span>Description</span>
+              <input
+                aria-label="Description"
+                defaultValue={group.description}
+                name="description"
+                placeholder="Optional description"
+                type="text"
+              />
+            </label>
+          </div>
         </div>
       </section>
 
