@@ -102,7 +102,7 @@ export default function Group({
           timeStyle: "short",
         })
       : "";
-  const viewerMemberId = group.viewerMemberId ?? "0";
+  const viewerMemberId = group.viewerMemberId ?? "";
   const getPaymentSummary = (payment: Payment) => {
     const isYouPayer = payment.payer.uniqueId === viewerMemberId;
     const isYouShared =

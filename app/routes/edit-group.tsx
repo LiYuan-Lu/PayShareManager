@@ -74,6 +74,15 @@ export async function action({
 
   const formData = await request.formData();
   const nextMembers = parseMembers(formData.get("membersString"));
+  const viewerMemberId = group.viewerMemberId;
+  if (
+    viewerMemberId &&
+    !nextMembers.some((nextMember) => nextMember.uniqueId === viewerMemberId)
+  ) {
+    return {
+      memberError: "You cannot remove yourself from a group.",
+    } satisfies EditGroupActionData;
+  }
   const paymentMemberIds = getGroupPaymentMemberIds(group);
   const removedBlockedMembers = (group.members ?? []).filter(
     (member) =>
@@ -156,7 +165,7 @@ export default function EditGroup({
     const removedMembers = members.filter(
       (member) => !nextMembers.some((nextMember) => nextMember.value === member.value)
     );
-    const removedSelf = removedMembers.find((member) => member.value === "0");
+    const removedSelf = removedMembers.find((member) => member.value === group.viewerMemberId);
     if (removedSelf) {
       setMemberError("You cannot remove yourself from a group.");
       return;

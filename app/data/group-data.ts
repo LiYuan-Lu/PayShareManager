@@ -4,7 +4,7 @@ import sortBy from "sort-by";
 import { defaultCurrency, normalizeCurrency } from "./currencies.js";
 import type { DataRepositories } from "./repositories/types";
 import {
-  calculateYouShouldPay,
+  calculateMemberShouldPay,
   getGroupPaymentMemberIds,
   type GroupMutation,
   type GroupRecord,
@@ -31,10 +31,6 @@ export {
   type SettlementTransfer,
 } from "./settlement.js";
 
-const kUserUniqueId = "0";
-const kUserName = "You";
-const kUser = {uniqueId: kUserUniqueId, name: kUserName};
-
 let repositories: DataRepositories | null = null;
 
 async function getRepositories() {
@@ -59,7 +55,7 @@ export async function getGroups(ownerUserId: string, query?: string | null) {
 
 export async function createEmptyGroup(ownerUserId: string) {
   const repository = await getRepositories();
-  return repository.createGroup(ownerUserId, { members: [kUser] });
+  return repository.createGroup(ownerUserId, { members: [] });
 }
 
 export async function getGroup(ownerUserId: string, uniqueId: string) {
@@ -82,13 +78,17 @@ export async function settleGroup(ownerUserId: string, uniqueId: string) {
 }
 
 export async function addPayment(ownerUserId: string, uniqueId: string, payment: Payment) {
+  const repository = await getRepositories();
   const paymentToSave: Payment = {
     ...payment,
     currency: normalizeCurrency(payment.currency ?? defaultCurrency),
     createdAt: payment.createdAt ?? new Date().toISOString(),
   };
-  paymentToSave.youShouldPay = calculateYouShouldPay(paymentToSave);
-  const repository = await getRepositories();
+  const group = await repository.getGroup(ownerUserId, uniqueId);
+  paymentToSave.youShouldPay = calculateMemberShouldPay(
+    paymentToSave,
+    group?.viewerMemberId
+  );
   await repository.addPayment(ownerUserId, uniqueId, paymentToSave);
 }
 
@@ -134,7 +134,10 @@ export async function updatePayment(ownerUserId: string, uniqueId: string, payme
     currency: normalizeCurrency(payment.currency ?? existingPayment.currency ?? defaultCurrency),
     createdAt: payment.createdAt ?? existingPayment.createdAt ?? new Date().toISOString(),
   };
-  updatedPayment.youShouldPay = calculateYouShouldPay(updatedPayment);
+  updatedPayment.youShouldPay = calculateMemberShouldPay(
+    updatedPayment,
+    group.viewerMemberId
+  );
   return repository.updatePayment(ownerUserId, uniqueId, paymentId, updatedPayment);
 }
 

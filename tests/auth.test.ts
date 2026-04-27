@@ -206,6 +206,14 @@ describe("auth", () => {
     assert.ok(!columns("group_members").includes("name"));
     assert.ok(!columns("payments").includes("payer_name"));
     assert.ok(!columns("payment_shares").includes("member_name"));
+    assert.equal(
+      (
+        database
+          .prepare("SELECT COUNT(*) AS count FROM group_members WHERE member_id = '0'")
+          .get() as { count: number }
+      ).count,
+      0
+    );
     database.close();
   });
 
@@ -454,6 +462,41 @@ describe("user scoped data", () => {
       shareMember: members,
       splitMode: "equal",
     });
+
+    const database = new Database(testDbPath);
+    assert.equal(
+      (
+        database
+          .prepare(`
+            SELECT COUNT(*) AS count
+            FROM group_members
+            WHERE group_id = ? AND member_id = '0'
+          `)
+          .get(group.uniqueId) as { count: number }
+      ).count,
+      0
+    );
+    assert.equal(
+      (
+        database
+          .prepare("SELECT COUNT(*) AS count FROM payments WHERE group_id = ? AND payer_id = '0'")
+          .get(group.uniqueId) as { count: number }
+      ).count,
+      0
+    );
+    assert.equal(
+      (
+        database
+          .prepare(`
+            SELECT COUNT(*) AS count
+            FROM payment_shares
+            WHERE group_id = ? AND member_id = '0'
+          `)
+          .get(group.uniqueId) as { count: number }
+      ).count,
+      0
+    );
+    database.close();
 
     let sharedGroup = await groupData.getGroup(member.uniqueId, group.uniqueId ?? "");
     let payment = sharedGroup?.paymentList?.get(0);

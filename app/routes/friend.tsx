@@ -64,7 +64,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     if (group.settledAt || !groupId) {
       return;
     }
-    const viewerMemberId = group.viewerMemberId ?? "0";
+    const viewerMemberId = group.viewerMemberId ?? "";
     const counterpartyMember = group.members?.find((member) => {
       if (friend.accountUserId && member.accountUserId === friend.accountUserId) {
         return true;
