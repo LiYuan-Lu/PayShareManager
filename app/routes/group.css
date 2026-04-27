@@ -46,6 +46,19 @@
   max-width: 56rem;
 }
 
+.group-status-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--success) 24%, var(--border));
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.32rem 0.7rem;
+}
+
 .muted {
   color: var(--text-muted);
 }
@@ -124,6 +137,18 @@
   border-color: color-mix(in srgb, var(--text-muted) 28%, var(--border));
   color: var(--text);
   box-shadow: var(--button-shadow);
+}
+
+.settle-button {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+.settle-button:hover {
+  background: color-mix(in srgb, var(--success) 86%, #000);
+  border-color: color-mix(in srgb, var(--success) 86%, #000);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--success) 18%, transparent);
 }
 
 .compact-button {

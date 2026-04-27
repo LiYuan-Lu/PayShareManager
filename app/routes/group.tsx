@@ -1,7 +1,7 @@
 import { Form } from "react-router";
 import { useState, useRef, useEffect, type FormEvent } from "react";
 
-import { getGroup} from "../data/group-data";
+import { getGroup, settleGroup } from "../data/group-data";
 import { requireUserId } from "../data/auth.server";
 import {
   calculateGroupSettlement,
@@ -28,6 +28,22 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw new Response("Not Found", { status: 404 });
   }
   return { group };
+}
+
+export async function action({ params, request }: Route.ActionArgs) {
+  if (!params.uniqueId) {
+    throw new Response("Not Found", { status: 404 });
+  }
+
+  const userId = await requireUserId(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent")?.toString();
+
+  if (intent === "settle") {
+    await settleGroup(userId, params.uniqueId);
+  }
+
+  return null;
 }
 
 export default function Group({
@@ -66,6 +82,9 @@ export default function Group({
     0
   );
   const formatAmount = (amount: number) => amount.toFixed(2);
+  const settledDate = group.settledAt
+    ? new Date(group.settledAt).toLocaleDateString()
+    : null;
   const formatPaymentDate = (dateStr?: string) =>
     dateStr ? new Date(dateStr).toLocaleDateString() : "-";
   const kUserId = "0";
@@ -117,9 +136,31 @@ export default function Group({
             ) : (
               <p className="group-description muted">No description</p>
             )}
+            {settledDate ? (
+              <div className="group-status-badge">
+                Settled on {settledDate}
+              </div>
+            ) : null}
           </div>
 
           <div className="group-hero-actions">
+            {!group.settledAt ? (
+              <Form
+                method="post"
+                onSubmit={(event) => {
+                  const response = confirm(
+                    "Mark this group as settled? Future friend balances will ignore this group's payments."
+                  );
+                  if (!response) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                <button className="settle-button" name="intent" type="submit" value="settle">
+                  Settle
+                </button>
+              </Form>
+            ) : null}
             <Form action="edit">
               <button className="secondary-button" type="submit">Edit</button>
             </Form>

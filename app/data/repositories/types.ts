@@ -20,6 +20,7 @@ export type GroupRepository = {
     values: GroupMutation,
     members?: GroupRecord["members"]
   ) => Promise<GroupRecord>;
+  settleGroup: (ownerUserId: string, uniqueId: string, settledAt: string) => Promise<GroupRecord>;
   deleteGroup: (ownerUserId: string, uniqueId: string) => Promise<void>;
   addPayment: (ownerUserId: string, uniqueId: string, payment: Payment) => Promise<void>;
   deletePayment: (ownerUserId: string, uniqueId: string, paymentId: number) => Promise<void>;

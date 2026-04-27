@@ -55,6 +55,7 @@ export type GroupMutation = {
   name?: string;
   description?: string;
   favorite?: boolean;
+  settledAt?: string | null;
   members?: Array<Member>;
   paymentList?: PaymentList;
   paymentNextId?: number;
@@ -250,6 +251,10 @@ export function calculateMemberPairBalance(
   const groupIds = new Set<string>();
 
   groups.forEach((group) => {
+    if (group.settledAt) {
+      return;
+    }
+
     group.paymentList?.forEach((payment) => {
       const cost = Number(payment.cost);
       if (!Number.isFinite(cost) || cost <= 0) {

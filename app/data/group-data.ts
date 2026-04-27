@@ -70,6 +70,11 @@ export async function updateGroup(ownerUserId: string, uniqueId: string, updates
   return repository.updateGroup(ownerUserId, uniqueId, updates, members);
 }
 
+export async function settleGroup(ownerUserId: string, uniqueId: string) {
+  const repository = await getRepositories();
+  return repository.settleGroup(ownerUserId, uniqueId, new Date().toISOString());
+}
+
 export async function addPayment(ownerUserId: string, uniqueId: string, payment: Payment) {
   const paymentToSave: Payment = {
     ...payment,

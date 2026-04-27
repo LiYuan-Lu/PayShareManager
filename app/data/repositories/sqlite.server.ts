@@ -37,6 +37,7 @@ type DbGroup = {
   description: string | null;
   favorite: number;
   created_at: string;
+  settled_at: string | null;
   payment_next_id: number;
 };
 
@@ -122,6 +123,7 @@ function migrate(database: Database.Database) {
       description TEXT,
       favorite INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
+      settled_at TEXT,
       payment_next_id INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY (owner_user_id) REFERENCES users(unique_id) ON DELETE CASCADE
     );
@@ -164,9 +166,11 @@ function migrate(database: Database.Database) {
   ensureDemoUser(database);
   ensureColumn(database, "friends", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
   ensureColumn(database, "groups", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
+  ensureColumn(database, "groups", "settled_at", "TEXT");
   backfillOwnerUserId(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date().toISOString());
   markMigration(database, "20260427_auth_user_scope");
+  markMigration(database, "20260427_group_settlement_state");
 }
 
 function ensureColumn(
@@ -316,6 +320,7 @@ function mapGroup(row: DbGroup): GroupRecord {
     description: row.description ?? undefined,
     favorite: Boolean(row.favorite),
     createdAt: row.created_at,
+    settledAt: row.settled_at ?? null,
     members: members.map((member) => ({
       uniqueId: member.member_id,
       name: member.name,
@@ -590,7 +595,7 @@ export function getSqliteRepositories(): DataRepositories {
     async getGroups(ownerUserId) {
       const rows = getDb()
         .prepare(`
-          SELECT unique_id, owner_user_id, name, description, favorite, created_at, payment_next_id
+          SELECT unique_id, owner_user_id, name, description, favorite, created_at, settled_at, payment_next_id
           FROM groups
           WHERE owner_user_id = ?
           ORDER BY name, created_at
@@ -602,7 +607,7 @@ export function getSqliteRepositories(): DataRepositories {
     async getGroup(ownerUserId, uniqueId) {
       const row = getDb()
         .prepare(`
-          SELECT unique_id, owner_user_id, name, description, favorite, created_at, payment_next_id
+          SELECT unique_id, owner_user_id, name, description, favorite, created_at, settled_at, payment_next_id
           FROM groups
           WHERE owner_user_id = ? AND unique_id = ?
         `)
@@ -637,12 +642,13 @@ export function getSqliteRepositories(): DataRepositories {
 
       getDb().prepare(`
         UPDATE groups
-        SET name = ?, description = ?, favorite = ?, payment_next_id = ?
+        SET name = ?, description = ?, favorite = ?, settled_at = ?, payment_next_id = ?
         WHERE owner_user_id = ? AND unique_id = ?
       `).run(
         values.name ?? existing.name ?? null,
         values.description ?? existing.description ?? null,
         values.favorite ?? existing.favorite ? 1 : 0,
+        values.settledAt === undefined ? existing.settledAt ?? null : values.settledAt,
         values.paymentNextId ?? existing.paymentNextId ?? 0,
         ownerUserId,
         uniqueId
@@ -651,6 +657,19 @@ export function getSqliteRepositories(): DataRepositories {
       if (members) {
         saveMembers(getDb(), uniqueId, members);
       }
+
+      return (await this.getGroup(ownerUserId, uniqueId)) as GroupRecord;
+    },
+
+    async settleGroup(ownerUserId, uniqueId, settledAt) {
+      const existing = await this.getGroup(ownerUserId, uniqueId);
+      if (!existing) {
+        throw new Error(`No group found for ${uniqueId}`);
+      }
+
+      getDb()
+        .prepare("UPDATE groups SET settled_at = ? WHERE owner_user_id = ? AND unique_id = ?")
+        .run(settledAt, ownerUserId, uniqueId);
 
       return (await this.getGroup(ownerUserId, uniqueId)) as GroupRecord;
     },

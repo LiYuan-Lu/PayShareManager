@@ -211,8 +211,22 @@ describe("calculateMemberPairBalance", () => {
       ),
       uniqueId: "group-2",
     };
+    const settledGroup = {
+      ...group(
+        [
+          payment({
+            payer: alex,
+            cost: 200,
+            shareMember: [you, alex],
+          }),
+        ],
+        [you, alex]
+      ),
+      uniqueId: "group-3",
+      settledAt: "2026-04-27T00:00:00.000Z",
+    };
 
-    const result = calculateMemberPairBalance([trip, dinner], alex, you);
+    const result = calculateMemberPairBalance([trip, dinner, settledGroup], alex, you);
 
     assert.deepEqual(result, {
       member: you,
