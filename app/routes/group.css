@@ -236,7 +236,8 @@
   gap: 0.65rem;
   max-height: 36vh;
   overflow-y: auto;
-  padding-right: 0.2rem;
+  padding-right: 0.35rem;
+  scrollbar-gutter: stable;
 }
 
 .payment-item {
@@ -500,6 +501,7 @@
 @media (max-width: 560px) {
   .settlement-card {
     overflow-x: auto;
+    scrollbar-gutter: stable;
   }
 
   .settlement-table {

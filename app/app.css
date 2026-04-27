@@ -26,6 +26,9 @@
   --success: #047857;
   --success-soft: #ecfdf5;
   --auth-input-bg: #f7f9ff;
+  --scrollbar-track: color-mix(in srgb, var(--surface-soft) 78%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 38%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--primary) 52%, var(--text-muted));
 }
 
 html[data-theme="dark"] {
@@ -56,6 +59,9 @@ html[data-theme="dark"] {
   --success: #34d399;
   --success-soft: #0b2f25;
   --auth-input-bg: #17243b;
+  --scrollbar-track: color-mix(in srgb, var(--surface-soft) 58%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 44%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--primary) 58%, var(--text-muted));
 }
 
 html {
@@ -66,6 +72,36 @@ html {
 *:before,
 *:after {
   box-sizing: inherit;
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 0.55rem;
+  height: 0.55rem;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 0.16rem solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 html,
@@ -2127,6 +2163,7 @@ p span {
 
 .rs__menu-list {
   padding: 0.4rem !important;
+  scrollbar-gutter: stable;
 }
 
 .rs__option {

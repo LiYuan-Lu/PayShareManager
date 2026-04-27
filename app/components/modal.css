@@ -17,6 +17,9 @@
     border: 1px solid var(--border);
     box-shadow: var(--shadow);
     width: 30em;
+    max-height: min(90vh, 48rem);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
   }
   
   .close {
