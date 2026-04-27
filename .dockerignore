@@ -1,0 +1,11 @@
+.git
+.react-router
+.test-build
+build
+data
+node_modules
+npm-debug.log*
+Dockerfile
+docker-compose.yml
+.env
+.env.*

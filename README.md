@@ -35,3 +35,29 @@ npm start
 ```
 
 Now you'll need to pick a host to deploy it to.
+
+## Docker / NAS testing
+
+Build and start the app with Docker Compose:
+
+```sh
+docker compose up -d --build
+```
+
+The app will listen on port `3000` by default. To use another host port, copy
+`.env.example` to `.env` and change `PAYSHARE_PORT`.
+
+SQLite data is stored at:
+
+```text
+./data/payshare.db
+```
+
+The compose file mounts `./data` into the container, so the database survives
+container rebuilds and restarts.
+
+Stop the app:
+
+```sh
+docker compose down
+```
