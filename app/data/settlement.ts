@@ -405,6 +405,114 @@ export function calculateMemberPairBalancesByCurrency(
     }));
 }
 
+function findGroupMemberByIdentity(group: GroupRecord, identity: Member) {
+  return group.members?.find((member) => {
+    if (identity.accountUserId && member.accountUserId === identity.accountUserId) {
+      return true;
+    }
+    return member.uniqueId === identity.uniqueId;
+  });
+}
+
+function getViewerMember(group: GroupRecord, fallback: Member = kUser) {
+  if (!group.viewerMemberId) {
+    return fallback;
+  }
+  return (
+    group.members?.find((member) => member.uniqueId === group.viewerMemberId) ?? {
+      ...fallback,
+      uniqueId: group.viewerMemberId,
+    }
+  );
+}
+
+export function calculateViewerMemberPairBalancesByCurrency(
+  groups: GroupRecord[],
+  counterparty: Member,
+  member: Member = kUser
+): CurrencyMemberPairBalance[] {
+  const groupsByCurrency = new Map<string, GroupRecord[]>();
+
+  groups.forEach((group) => {
+    if (group.settledAt) {
+      return;
+    }
+
+    const viewerMember = getViewerMember(group, member);
+    const groupCounterparty = findGroupMemberByIdentity(group, counterparty);
+    if (!groupCounterparty) {
+      return;
+    }
+
+    group.paymentList?.forEach((payment, paymentId) => {
+      const currency = normalizeCurrency(payment.currency ?? defaultCurrency);
+      if (!groupsByCurrency.has(currency)) {
+        groupsByCurrency.set(currency, []);
+      }
+
+      const currencyGroups = groupsByCurrency.get(currency);
+      let currencyGroup = currencyGroups?.find((item) => item.uniqueId === group.uniqueId);
+      if (!currencyGroup) {
+        currencyGroup = {
+          ...group,
+          paymentList: new Map(),
+        };
+        currencyGroups?.push(currencyGroup);
+      }
+      currencyGroup.paymentList?.set(paymentId, payment);
+    });
+
+    groupsByCurrency.forEach((currencyGroups) => {
+      const currencyGroup = currencyGroups.find((item) => item.uniqueId === group.uniqueId);
+      if (currencyGroup) {
+        currencyGroup.viewerMemberId = viewerMember.uniqueId;
+      }
+    });
+  });
+
+  return Array.from(groupsByCurrency.entries())
+    .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+    .map(([currency, currencyGroups]) => {
+      let paidForCounterparty = 0;
+      let counterpartyPaidForMember = 0;
+      let paymentCount = 0;
+      const groupIds = new Set<string>();
+      let resolvedMember = member;
+      let resolvedCounterparty = counterparty;
+
+      currencyGroups.forEach((group) => {
+        const viewerMember = getViewerMember(group, member);
+        const groupCounterparty = findGroupMemberByIdentity(group, counterparty);
+        if (!groupCounterparty) {
+          return;
+        }
+        resolvedMember = viewerMember;
+        resolvedCounterparty = groupCounterparty;
+
+        const balance = calculateMemberPairBalance([group], groupCounterparty, viewerMember);
+        paidForCounterparty = roundTo2(paidForCounterparty + balance.paidForCounterparty);
+        counterpartyPaidForMember = roundTo2(
+          counterpartyPaidForMember + balance.counterpartyPaidForMember
+        );
+        paymentCount += balance.paymentCount;
+        if (balance.groupCount > 0 && group.uniqueId) {
+          groupIds.add(group.uniqueId);
+        }
+      });
+
+      return {
+        currency,
+        member: resolvedMember,
+        counterparty: resolvedCounterparty,
+        paidForCounterparty,
+        counterpartyPaidForMember,
+        net: roundTo2(paidForCounterparty - counterpartyPaidForMember),
+        paymentCount,
+        groupCount: groupIds.size,
+      };
+    });
+}
+
 export function getGroupPaymentMemberIds(group: GroupRecord | null | undefined) {
   const memberIds = new Set<string>();
 

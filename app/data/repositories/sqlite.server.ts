@@ -543,6 +543,7 @@ function getFriendsFromDb(database: Database.Database, ownerUserId: string) {
     uniqueId: row.unique_id,
     name: row.name,
     email: row.email,
+    accountUserId: row.friend_user_id,
   }));
 }
 
@@ -761,9 +762,9 @@ function mapPayment(groupId: string, row: DbPayment, membersById: Map<string, Me
 
   return {
     name: row.name,
-    payer: {
+    payer: membersById.get(row.payer_id) ?? {
       uniqueId: row.payer_id,
-      name: membersById.get(row.payer_id)?.name ?? row.payer_name,
+      name: row.payer_name,
     },
     cost: row.cost,
     currency: normalizeCurrency(row.currency ?? defaultCurrency),
@@ -1201,6 +1202,7 @@ export function getSqliteRepositories(): DataRepositories {
             uniqueId: row.unique_id,
             name: row.name,
             email: row.email,
+            accountUserId: row.friend_user_id,
           }
         : null;
     },
@@ -1225,6 +1227,7 @@ export function getSqliteRepositories(): DataRepositories {
         throw new Error(`No friend found for ${uniqueId}`);
       }
       const database = getDb();
+      const email = values.email || existing.email;
       const transaction = database.transaction(() => {
         database.prepare(`
           UPDATE friends
@@ -1236,7 +1239,7 @@ export function getSqliteRepositories(): DataRepositories {
                 WHERE lower(users.email) = lower(?)
               )
           WHERE owner_user_id = ? AND unique_id = ?
-        `).run(values.name, values.email, values.email, ownerUserId, uniqueId);
+        `).run(values.name, email, email, ownerUserId, uniqueId);
         database.prepare(`
           UPDATE group_members
           SET name = ?,
@@ -1260,7 +1263,8 @@ export function getSqliteRepositories(): DataRepositories {
         `).run(values.name, uniqueId, ownerUserId);
       });
       transaction();
-      return { ...existing, ...values, uniqueId };
+      const updated = await this.getFriend(ownerUserId, uniqueId);
+      return updated ?? { ...existing, ...values, email, uniqueId };
     },
 
     async deleteFriend(ownerUserId, uniqueId) {

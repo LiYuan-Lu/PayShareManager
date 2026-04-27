@@ -6,7 +6,7 @@ import { deleteFriend, getFriend, getFriendUsage, updateFriend } from "../data/f
 import { requireUserId } from "../data/auth.server";
 import { getGroups } from "../data/group-data";
 import { formatCurrencyAmount } from "../data/currencies";
-import { calculateMemberPairBalancesByCurrency } from "../data/settlement";
+import { calculateViewerMemberPairBalancesByCurrency } from "../data/settlement";
 import type { Route } from "./+types/friend";
 
 type FriendActionData = {
@@ -64,24 +64,35 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     if (group.settledAt || !groupId) {
       return;
     }
+    const viewerMemberId = group.viewerMemberId ?? "0";
+    const counterpartyMember = group.members?.find((member) => {
+      if (friend.accountUserId && member.accountUserId === friend.accountUserId) {
+        return true;
+      }
+      return member.uniqueId === params.uniqueId;
+    });
+    if (!counterpartyMember) {
+      return;
+    }
     group.paymentList?.forEach((payment) => {
       const shareMembers = payment.shareDetails?.length
         ? payment.shareDetails.map((item) => item.member)
         : payment.shareMember;
       const youPaidForFriend =
-        payment.payer.uniqueId === "0" &&
-        shareMembers.some((member) => member.uniqueId === params.uniqueId);
+        payment.payer.uniqueId === viewerMemberId &&
+        shareMembers.some((member) => member.uniqueId === counterpartyMember.uniqueId);
       const friendPaidForYou =
-        payment.payer.uniqueId === params.uniqueId &&
-        shareMembers.some((member) => member.uniqueId === "0");
+        payment.payer.uniqueId === counterpartyMember.uniqueId &&
+        shareMembers.some((member) => member.uniqueId === viewerMemberId);
       if (youPaidForFriend || friendPaidForYou) {
         directGroupIds.add(groupId);
       }
     });
   });
-  const balances = calculateMemberPairBalancesByCurrency(groups, {
+  const balances = calculateViewerMemberPairBalancesByCurrency(groups, {
     uniqueId: params.uniqueId,
     name: friend.name ?? "",
+    accountUserId: friend.accountUserId,
   });
   return { friend, usage, balances, balanceGroupCount: directGroupIds.size };
 }

@@ -6,6 +6,7 @@ import {
   calculateGroupSettlementByCurrency,
   calculateMemberPairBalance,
   calculateMemberPairBalancesByCurrency,
+  calculateViewerMemberPairBalancesByCurrency,
   type GroupRecord,
   type Member,
   type Payment,
@@ -315,6 +316,59 @@ describe("calculateMemberPairBalance", () => {
           paidForCounterparty: 45,
           counterpartyPaidForMember: 0,
           net: 45,
+        },
+      ]
+    );
+  });
+
+  it("uses the viewer member id when calculating balances in a shared group", () => {
+    const owner: Member = { uniqueId: "0", name: "Owner", accountUserId: "owner-user" };
+    const recipientAsOwnerFriend: Member = {
+      uniqueId: "owner-friend-id",
+      name: "You",
+      accountUserId: "recipient-user",
+    };
+    const ownerAsRecipientFriend: Member = {
+      uniqueId: "recipient-friend-id",
+      name: "Owner",
+      accountUserId: "owner-user",
+    };
+    const sharedGroup = group(
+      [
+        payment({
+          payer: owner,
+          cost: 100,
+          currency: "TWD",
+          shareMember: [owner, recipientAsOwnerFriend],
+        }),
+      ],
+      [owner, recipientAsOwnerFriend]
+    );
+    sharedGroup.viewerMemberId = recipientAsOwnerFriend.uniqueId;
+
+    const result = calculateViewerMemberPairBalancesByCurrency(
+      [sharedGroup],
+      ownerAsRecipientFriend,
+      recipientAsOwnerFriend
+    );
+
+    assert.deepEqual(
+      result.map((item) => ({
+        currency: item.currency,
+        paidForCounterparty: item.paidForCounterparty,
+        counterpartyPaidForMember: item.counterpartyPaidForMember,
+        net: item.net,
+        paymentCount: item.paymentCount,
+        groupCount: item.groupCount,
+      })),
+      [
+        {
+          currency: "TWD",
+          paidForCounterparty: 0,
+          counterpartyPaidForMember: 50,
+          net: -50,
+          paymentCount: 1,
+          groupCount: 1,
         },
       ]
     );

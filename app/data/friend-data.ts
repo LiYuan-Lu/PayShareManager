@@ -8,6 +8,7 @@ export type FriendMutation = {
   uniqueId?: string;
   name: string;
   email: string;
+  accountUserId?: string | null;
 };
 
 export type FriendUsage = {
