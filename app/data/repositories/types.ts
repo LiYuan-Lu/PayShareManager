@@ -71,6 +71,7 @@ export type UserRepository = {
   getUserById: (uniqueId: string) => Promise<UserRecord | null>;
   getUserByEmail: (email: string) => Promise<UserRecord | null>;
   createUser: (values: { email: string; name: string; passwordHash: string }) => Promise<UserRecord>;
+  updateUserProfile: (userId: string, values: { name: string }) => Promise<UserRecord>;
   updateUserPassword: (userId: string, passwordHash: string) => Promise<void>;
   getUserPasswordHash: (email: string) => Promise<string | null>;
   createSession: (userId: string, expiresAt: string) => Promise<string>;

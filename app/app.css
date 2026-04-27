@@ -505,14 +505,26 @@ form[action$="destroy"] button {
   border-top: 1px solid var(--border);
 }
 
-.sidebar-user span {
+.sidebar-profile-link {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-muted);
+  color: var(--text-muted) !important;
   font-size: 0.85rem;
   font-weight: 600;
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.sidebar-profile-link:hover {
+  color: var(--text) !important;
+  text-decoration: underline;
+}
+
+.sidebar-profile-link.active::before {
+  display: none;
 }
 
 .sidebar-user button {
@@ -897,6 +909,17 @@ i {
   gap: 1rem;
   max-width: 960px;
   padding: 2rem;
+}
+
+.profile-shell {
+  display: grid;
+  gap: 1rem;
+  max-width: 42rem;
+  padding: 2rem;
+}
+
+.profile-card {
+  max-width: 34rem;
 }
 
 .admin-hero,

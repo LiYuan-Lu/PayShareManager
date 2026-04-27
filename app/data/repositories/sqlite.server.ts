@@ -873,6 +873,56 @@ export function getSqliteRepositories(): DataRepositories {
       return { uniqueId, email: values.email.toLowerCase(), name: values.name, role: "user" };
     },
 
+    async updateUserProfile(userId, values) {
+      const existing = await this.getUserById(userId);
+      if (!existing) {
+        throw new Error("User not found.");
+      }
+      const database = getDb();
+      const transaction = database.transaction(() => {
+        database
+          .prepare("UPDATE users SET name = ? WHERE unique_id = ?")
+          .run(values.name, userId);
+        database
+          .prepare("UPDATE friends SET name = ? WHERE lower(email) = lower(?)")
+          .run(values.name, existing.email);
+        database
+          .prepare("UPDATE group_members SET name = ? WHERE member_user_id = ?")
+          .run(values.name, userId);
+        database
+          .prepare(`
+            UPDATE payments
+            SET payer_name = ?
+            WHERE EXISTS (
+              SELECT 1
+              FROM group_members
+              WHERE group_members.group_id = payments.group_id
+                AND group_members.member_id = payments.payer_id
+                AND group_members.member_user_id = ?
+            )
+          `)
+          .run(values.name, userId);
+        database
+          .prepare(`
+            UPDATE payment_shares
+            SET member_name = ?
+            WHERE EXISTS (
+              SELECT 1
+              FROM group_members
+              WHERE group_members.group_id = payment_shares.group_id
+                AND group_members.member_id = payment_shares.member_id
+                AND group_members.member_user_id = ?
+            )
+          `)
+          .run(values.name, userId);
+      });
+      transaction();
+      return {
+        ...existing,
+        name: values.name,
+      };
+    },
+
     async updateUserPassword(userId, passwordHash) {
       getDb()
         .prepare("UPDATE users SET password_hash = ? WHERE unique_id = ?")

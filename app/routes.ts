@@ -62,6 +62,10 @@ export default [
         "routes/about.tsx"
     ),
     route(
+        "profile",
+        "routes/profile.tsx"
+    ),
+    route(
         "admin",
         "routes/admin.tsx"
     ),

@@ -261,7 +261,9 @@ export default function SidebarLayout({
             About
           </NavLink>
           <div className="sidebar-user">
-            <span>{user.name}</span>
+            <NavLink className="sidebar-profile-link" to="/profile">
+              {user.name}
+            </NavLink>
             <Form action="/logout" method="post">
               <button type="submit">Sign out</button>
             </Form>

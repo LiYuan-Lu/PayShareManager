@@ -218,6 +218,22 @@ describe("auth", () => {
     );
     await auth.disableInviteCode(demoUser.uniqueId, "RESET-CODE");
   });
+
+  it("updates the current user's profile name", async () => {
+    const user = await auth.registerUser({
+      email: "profile@example.com",
+      name: "Profile Before",
+      password: "password123",
+    });
+
+    const updated = await auth.updateCurrentUserProfile(user.uniqueId, {
+      name: "Profile After",
+    });
+
+    assert.equal(updated.name, "Profile After");
+    const loggedIn = await auth.loginUser("profile@example.com", "password123");
+    assert.equal(loggedIn.name, "Profile After");
+  });
 });
 
 describe("user scoped data", () => {

@@ -126,6 +126,18 @@ export async function requireAdmin(request: Request) {
   return user;
 }
 
+export async function updateCurrentUserProfile(userId: string, values: { name: string }) {
+  const repository = await getRepositories();
+  const name = values.name.trim();
+  if (!name) {
+    throw new Error("Name is required.");
+  }
+  if (name.length > 80) {
+    throw new Error("Name must be 80 characters or fewer.");
+  }
+  return repository.updateUserProfile(userId, { name });
+}
+
 export function createTokenHash(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
