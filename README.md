@@ -47,6 +47,27 @@ docker compose up -d --build
 The app will listen on port `3000` by default. To use another host port, copy
 `.env.example` to `.env` and change `PAYSHARE_PORT`.
 
+Set the initial admin account in `.env`:
+
+```text
+PAYSHARE_ADMIN_EMAIL=you@example.com
+PAYSHARE_ADMIN_PASSWORD=use-a-long-password
+```
+
+When the container starts, the app creates this account as admin if it does not
+exist. If the email already exists, it is promoted to admin and the password is
+updated from `PAYSHARE_ADMIN_PASSWORD`. The password must be at least 8
+characters.
+
+The built-in demo admin still exists for local testing:
+
+```text
+demo@payshare.local / password123
+```
+
+After signing in as admin, open `/admin` to create invite codes or generate
+manual password reset links.
+
 SQLite data is stored at:
 
 ```text

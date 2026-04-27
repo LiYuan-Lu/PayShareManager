@@ -1,3 +1,4 @@
+import { scryptSync } from "node:crypto";
 import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
@@ -116,6 +117,7 @@ const kUser: Member = { uniqueId: "0", name: "You" };
 const demoUserId = "demo-user";
 const demoPasswordHash =
   "scrypt:demo-auth-salt-2026:a2ef900b153f1a7ab22894746d7027b6d5e9c92c0bef7f50bfaf76c04aca6d47b565840fe690dd05b2c6389e6936c53025660885dfe14bce9d601790c008d0c5";
+const envAdminPasswordSalt = "payshare-env-admin-2026";
 const defaultDbPath = path.join(process.cwd(), "data", "payshare.db");
 const dbPath = process.env.PAYSHARE_DB_PATH || defaultDbPath;
 let db: Database.Database | null = null;
@@ -268,7 +270,7 @@ function migrate(database: Database.Database) {
   ensureDemoUser(database);
   ensureColumn(database, "users", "role", "TEXT NOT NULL DEFAULT 'user'");
   database.prepare("UPDATE users SET role = 'admin' WHERE unique_id = ?").run(demoUserId);
-  applyConfiguredAdmins(database);
+  provisionConfiguredAdmin(database);
   ensureColumn(database, "friends", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
   ensureColumn(database, "friends", "friend_user_id", "TEXT");
   ensureColumn(database, "groups", "owner_user_id", `TEXT NOT NULL DEFAULT '${demoUserId}'`);
@@ -319,14 +321,47 @@ function ensureDemoUser(database: Database.Database) {
     .run(demoPasswordHash, demoUserId, "local-dev-password");
 }
 
-function applyConfiguredAdmins(database: Database.Database) {
-  const adminEmails = (process.env.PAYSHARE_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-  adminEmails.forEach((email) => {
-    database.prepare("UPDATE users SET role = 'admin' WHERE lower(email) = lower(?)").run(email);
-  });
+function hashConfiguredAdminPassword(password: string) {
+  const derivedKey = scryptSync(password, envAdminPasswordSalt, 64);
+  return `scrypt:${envAdminPasswordSalt}:${derivedKey.toString("hex")}`;
+}
+
+function provisionConfiguredAdmin(database: Database.Database) {
+  const email = (process.env.PAYSHARE_ADMIN_EMAIL ?? "").trim().toLowerCase();
+  const password = process.env.PAYSHARE_ADMIN_PASSWORD ?? "";
+  if (!email && !password) {
+    return;
+  }
+  if (!email || !password) {
+    console.warn("PAYSHARE_ADMIN_EMAIL and PAYSHARE_ADMIN_PASSWORD must be set together.");
+    return;
+  }
+  if (password.length < 8) {
+    console.warn("PAYSHARE_ADMIN_PASSWORD must be at least 8 characters.");
+    return;
+  }
+
+  const existing = database
+    .prepare("SELECT unique_id FROM users WHERE lower(email) = lower(?)")
+    .get(email) as { unique_id: string } | undefined;
+  const passwordHash = hashConfiguredAdminPassword(password);
+  const name = email.split("@")[0] || "Admin";
+
+  if (existing) {
+    database.prepare(`
+      UPDATE users
+      SET name = COALESCE(NULLIF(name, ''), ?),
+          password_hash = ?,
+          role = 'admin'
+      WHERE unique_id = ?
+    `).run(name, passwordHash, existing.unique_id);
+    return;
+  }
+
+  database.prepare(`
+    INSERT INTO users (unique_id, email, name, password_hash, role, created_at)
+    VALUES (?, ?, ?, ?, 'admin', ?)
+  `).run(randomUUID(), email, name, passwordHash, new Date().toISOString());
 }
 
 function backfillOwnerUserId(database: Database.Database) {
