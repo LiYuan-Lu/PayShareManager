@@ -6,7 +6,7 @@
     "build": "cross-env NODE_ENV=production react-router build",
     "dev": "react-router dev",
     "start": "cross-env NODE_ENV=production react-router-serve ./build/server/index.js",
-    "test": "tsc -p tsconfig.test.json && node --experimental-specifier-resolution=node --test .test-build/tests/group-settlement.test.js",
+    "test": "tsc -p tsconfig.test.json && node --experimental-specifier-resolution=node --test .test-build/tests/*.test.js",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
