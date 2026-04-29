@@ -55,6 +55,7 @@ export default function Group({
   const defaultPaymentDate = new Date().toISOString().slice(0, 10);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [expandedPaymentIds, setExpandedPaymentIds] = useState<Set<number>>(new Set());
 
   const [paymentList, setPaymentList] = useState<PaymentList>();
   const paymentFormRef = useRef<PaymentFormFieldsHandle>(null);
@@ -65,6 +66,7 @@ export default function Group({
 
   useEffect(() => {
     setPaymentList(group.paymentList);
+    setExpandedPaymentIds(new Set());
   }, [group.paymentList])
 
 
@@ -131,6 +133,44 @@ export default function Group({
       return "payment-summary-lent";
     }
     return "payment-summary-neutral";
+  };
+  const getPaymentShareDetails = (payment: Payment) => {
+    if (payment.splitMode === "shares" && payment.shareDetails?.length) {
+      return payment.shareDetails.filter((item) => item.shares > 0);
+    }
+    return payment.shareMember.map((member) => ({ member, shares: 1 }));
+  };
+  const getShareAmount = (payment: Payment, memberId: string) => {
+    const shareDetails = getPaymentShareDetails(payment);
+    const totalShares = shareDetails.reduce((sum, item) => sum + item.shares, 0);
+    if (totalShares <= 0) {
+      return 0;
+    }
+    const memberShare = shareDetails.find((item) => item.member.uniqueId === memberId);
+    if (!memberShare) {
+      return 0;
+    }
+    return Number(payment.cost ?? 0) * (memberShare.shares / totalShares);
+  };
+  const getSharedSummary = (payment: Payment) => {
+    const shareDetails = getPaymentShareDetails(payment);
+    if (!shareDetails.length) {
+      return "No shared members";
+    }
+    const visibleNames = shareDetails.slice(0, 2).map((item) => item.member.name);
+    const remainingCount = shareDetails.length - visibleNames.length;
+    return `Shared by ${visibleNames.join(", ")}${remainingCount > 0 ? ` +${remainingCount}` : ""}`;
+  };
+  const togglePaymentDetails = (paymentId: number) => {
+    setExpandedPaymentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(paymentId)) {
+        next.delete(paymentId);
+      } else {
+        next.add(paymentId);
+      }
+      return next;
+    });
   };
 
   const handleAddPaymentSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -253,42 +293,84 @@ export default function Group({
           </div>
           <div id="payment-list">
             {payments.length ? (
-              payments.map(([id, payment]: [number, Payment]) => (
-                <div className="payment-item" key={id}>
-                  <div className="payment-content">
-                    <div className="payment-meta">
-                      <span className="payment-date">{formatPaymentDate(payment.createdAt)}</span>
-                      <span className="payment-name">{payment.name}</span>
-                    </div>
-                    <div className="payment-detail">
-                      <span>{payment.payer.name}</span>
-                      <span>paid {formatAmount(payment.cost, payment.currency)}</span>
-                    </div>
-                    <div className="payment-audit">
-                      {payment.createdBy ? (
-                        <span>Added by {payment.createdBy.name}</span>
-                      ) : null}
-                      {payment.updatedBy && payment.updatedAt ? (
-                        <span>
-                          Updated by {payment.updatedBy.name} at{" "}
-                          {formatPaymentAuditDate(payment.updatedAt)}
+              payments.map(([id, payment]: [number, Payment]) => {
+                const isExpanded = expandedPaymentIds.has(id);
+                const shareDetails = getPaymentShareDetails(payment);
+                return (
+                  <div className="payment-item" key={id}>
+                    <button
+                      aria-controls={`payment-share-details-${id}`}
+                      aria-expanded={isExpanded}
+                      className="payment-disclosure"
+                      onClick={() => togglePaymentDetails(id)}
+                      type="button"
+                    >
+                      <span className="payment-content">
+                        <span className="payment-meta">
+                          <span className="payment-date">{formatPaymentDate(payment.createdAt)}</span>
+                          <span className="payment-name">{payment.name}</span>
                         </span>
-                      ) : null}
+                        <span className="payment-detail">
+                          <span>{payment.payer.name}</span>
+                          <span>paid {formatAmount(payment.cost, payment.currency)}</span>
+                        </span>
+                        <span className="payment-share-summary">
+                          {getSharedSummary(payment)}
+                        </span>
+                        <span className="payment-audit">
+                          {payment.createdBy ? (
+                            <span>Added by {payment.createdBy.name}</span>
+                          ) : null}
+                          {payment.updatedBy && payment.updatedAt ? (
+                            <span>
+                              Updated by {payment.updatedBy.name} at{" "}
+                              {formatPaymentAuditDate(payment.updatedAt)}
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                      <span className={`payment-summary ${getSummaryToneClass(payment)}`}>
+                        {getPaymentSummary(payment)}
+                      </span>
+                      <span className="payment-expand-icon" aria-hidden="true">
+                        {isExpanded ? "−" : "+"}
+                      </span>
+                    </button>
+                    {isExpanded ? (
+                      <div className="payment-share-details" id={`payment-share-details-${id}`}>
+                        <div className="payment-share-details-heading">
+                          <span>Shared by</span>
+                          <span>{payment.splitMode === "shares" ? "By shares" : "Equal split"}</span>
+                        </div>
+                        <div className="payment-share-detail-list">
+                          {shareDetails.map((share) => (
+                            <div className="payment-share-detail-item" key={share.member.uniqueId}>
+                              <span>{share.member.name}</span>
+                              <span>
+                                {payment.splitMode === "shares"
+                                  ? `${share.shares} ${share.shares === 1 ? "share" : "shares"} · `
+                                  : ""}
+                                {formatAmount(
+                                  getShareAmount(payment, share.member.uniqueId),
+                                  payment.currency
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    <div className="payment-actions">
+                      <Form action={`/groups/${group.uniqueId}/edit-payment/${id}`}>
+                        <button className="secondary-button compact-button" type="submit">Edit</button>
+                      </Form>
+                      <Form action={`/groups/${group.uniqueId}/delete-payment/${id}`} method="post">
+                        <button type="submit" className="danger-button compact-button">Delete</button>
+                      </Form>
                     </div>
                   </div>
-                  <div className={`payment-summary ${getSummaryToneClass(payment)}`}>
-                    {getPaymentSummary(payment)}
-                  </div>
-                  <div className="payment-actions">
-                    <Form action={`/groups/${group.uniqueId}/edit-payment/${id}`}>
-                      <button className="secondary-button compact-button" type="submit">Edit</button>
-                    </Form>
-                    <Form action={`/groups/${group.uniqueId}/delete-payment/${id}`} method="post">
-                      <button type="submit" className="danger-button compact-button">Delete</button>
-                    </Form>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="empty-state">No payments yet.</div>
             )}
